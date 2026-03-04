@@ -7,47 +7,42 @@ import twilio from 'twilio';
 dotenv.config();
 
 const app = express();
-// Twilio sends data as URL-encoded forms
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize Gemini with the API Key from your Render Environment Variables
+// Initialize Gemini - Using the '8b' model which is the most compatible
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
 
-// We specify the model here. "gemini-1.5-flash" is the current standard.
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-// 1. WEB HEALTH CHECK
-// This confirms the server is awake when you visit the URL in a browser
+// 1. WEB HEALTH CHECK (Confirms Render is working)
 app.get('/', (req, res) => {
     res.send('USAKO AI Receptionist is Online and Healthy.');
 });
 
 // 2. VOICE WEBHOOK (The "Front Door" for your Phone Number)
-// This must be app.post to match Twilio's default setting
 app.post('/voice', async (req, res) => {
     console.log("Incoming call detected...");
     const twiml = new twilio.twiml.VoiceResponse();
 
     try {
-        // The initial prompt to set the AI's personality
-        const prompt = "You are the professional AI receptionist for USAKO. Greet the caller warmly, state that they have reached USAKO, and ask how you can assist them today.";
+        // AI Instructions
+        const prompt = "You are the professional AI receptionist for USAKO. Greet the caller warmly, state that they have reached USAKO, and ask how you can assist them today. Keep your response under 20 words.";
         
         const result = await model.generateContent(prompt);
         const aiResponse = result.response.text();
 
-        // Twilio speaks the AI-generated text
         twiml.say(aiResponse);
         
-        // Listen for the caller's response
+        // Listen for the caller
         twiml.gather({
             input: 'speech',
-            action: '/respond', // Send the caller's words to this route
+            action: '/respond',
             timeout: 3,
             enhanced: true
         });
 
     } catch (error) {
         console.error("AI Error:", error);
+        // This is the message you heard earlier—it means the code above failed.
         twiml.say("Thank you for calling USAKO. I am having a moment of technical difficulty, but please tell me your name and why you are calling, and a human will get back to you.");
         twiml.record({ maxLength: 30 });
     }
@@ -56,7 +51,7 @@ app.post('/voice', async (req, res) => {
     res.send(twiml.toString());
 });
 
-// 3. RESPONSE HANDLER (Processes what the caller says)
+// 3. RESPONSE HANDLER (Conversation Loop)
 app.post('/respond', async (req, res) => {
     const userSpeech = req.body.SpeechResult;
     console.log("Caller said:", userSpeech);
@@ -64,19 +59,17 @@ app.post('/respond', async (req, res) => {
 
     try {
         if (userSpeech) {
-            const result = await model.generateContent(userSpeech);
+            const result = await model.generateContent(`The caller said: ${userSpeech}. Respond as the USAKO receptionist.`);
             const aiReply = result.response.text();
             
             twiml.say(aiReply);
-            // Continue the conversation
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
             twiml.say("I'm sorry, I didn't catch that. Could you say that again?");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
-        console.error("Response Route AI Error:", error);
-        twiml.say("I'm sorry, I lost my connection. Please try again later.");
+        twiml.say("I'm sorry, I lost my connection. One moment please.");
         twiml.hangup();
     }
 
