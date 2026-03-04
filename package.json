@@ -1,6 +1,6 @@
 {
   "name": "usako-virtual-receptionist",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI Virtual Receptionist for USAKO",
   "main": "server.js",
   "type": "module",
@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@google/genai": "^0.21.0",
+    "@google/generative-ai": "^0.21.0",
     "body-parser": "^1.20.2",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
