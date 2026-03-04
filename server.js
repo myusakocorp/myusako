@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import twilio from 'twilio';
-import { GoogleGenerativeAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -103,4 +103,5 @@ app.get('/', (_req, res) => {
 // Start Server on 0.0.0.0 to ensure Render binding
 app.listen(port, '0.0.0.0', () => {
   console.log(`USAKO Server listening on port ${port}`);
+
 });
