@@ -9,17 +9,14 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// FORCE STABLE API VERSION
-// This prevents the "v1beta" 404 error you see in your logs
+// Initialize Gemini 2.0 - The new 2026 stable standard
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Use the standard model name
-const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-});
+// Use 'gemini-2.0-flash' to avoid the 404 error from retired 1.5 models
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 app.get('/', (req, res) => {
-    res.send('USAKO AI Receptionist is Online and Healthy.');
+    res.send('USAKO AI Receptionist is Online.');
 });
 
 app.post('/voice', async (req, res) => {
@@ -27,8 +24,8 @@ app.post('/voice', async (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
 
     try {
-        // We use a simple prompt to test the connection
-        const result = await model.generateContent("You are the USAKO receptionist. Greet the caller briefly.");
+        const prompt = "You are the professional AI receptionist for USAKO. Greet the caller warmly and ask how you can help. Keep it very brief.";
+        const result = await model.generateContent(prompt);
         const aiResponse = result.response.text();
 
         twiml.say(aiResponse);
@@ -39,9 +36,8 @@ app.post('/voice', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("AI Error:", error.message);
-        // Fallback if Google still acts up
-        twiml.say("Welcome to USAKO. I'm experiencing a temporary connection issue. Please leave your name and number after the beep.");
+        console.error("AI Brain Error:", error.message);
+        twiml.say("Welcome to USAKO. I'm having a connection issue. Please leave your name and number.");
         twiml.record({ maxLength: 20 });
     }
 
@@ -59,7 +55,6 @@ app.post('/respond', async (req, res) => {
             twiml.say(result.response.text());
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
-            twiml.say("I didn't catch that. Could you repeat it?");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
@@ -72,5 +67,5 @@ app.post('/respond', async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`USAKO Server listening on port ${PORT}`);
+    console.log(`Server listening on port ${PORT}`);
 });
