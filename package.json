@@ -1,29 +1,20 @@
 {
-  "name": "yallist",
-  "version": "3.1.1",
-  "description": "Yet Another Linked List",
-  "main": "yallist.js",
-  "directories": {
-    "test": "test"
-  },
-  "files": [
-    "yallist.js",
-    "iterator.js"
-  ],
-  "dependencies": {},
-  "devDependencies": {
-    "tap": "^12.1.0"
-  },
+  "name": "usako-virtual-receptionist",
+  "version": "1.0.0",
+  "description": "AI Virtual Receptionist for USAKO",
+  "main": "server.js",
+  "type": "module",
   "scripts": {
-    "test": "tap test/*.js --100",
-    "preversion": "npm test",
-    "postversion": "npm publish",
-    "postpublish": "git push origin --all; git push origin --tags"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/isaacs/yallist.git"
+  "dependencies": {
+    "@google/genai": "^0.21.0",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "twilio": "^5.0.4"
   },
-  "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
+  "author": "",
   "license": "ISC"
 }
