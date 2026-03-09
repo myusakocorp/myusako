@@ -5,8 +5,7 @@ import twilio from 'twilio';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-// Pull the library using the most stable method for Node v22
-const GoogleAI = require('@google/generative-ai');
+const GoogleAIModule = require('@google/generative-ai');
 
 dotenv.config();
 
@@ -14,11 +13,22 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
 /**
- * THE ABSOLUTE FIX:
- * We access the .GoogleGenAI property directly from the required module.
- * This prevents the "is not a constructor" error.
+ * THE ULTIMATE CONSTRUCTOR HUNTER:
+ * This logic checks all 3 ways Node v22 might package the Google SDK.
  */
-const genAI = new GoogleAI.GoogleGenAI(process.env.GEMINI_API_KEY);
+let GoogleGenAI;
+if (typeof GoogleAIModule.GoogleGenAI === 'function') {
+    GoogleGenAI = GoogleAIModule.GoogleGenAI;
+} else if (GoogleAIModule.default && typeof GoogleAIModule.default.GoogleGenAI === 'function') {
+    GoogleGenAI = GoogleAIModule.default.GoogleGenAI;
+} else if (typeof GoogleAIModule === 'function') {
+    GoogleGenAI = GoogleAIModule;
+} else {
+    // If all else fails, look inside the default export itself
+    GoogleGenAI = GoogleAIModule.default;
+}
+
+const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-1.5-flash"; 
 
 const sessions = new Map();
@@ -30,7 +40,7 @@ app.post('/voice', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. No markdown, bolding, or asterisks.",
+            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Speak naturally. Do not use markdown, bolding, or asterisks.",
         });
 
         const chat = model.startChat();
@@ -88,7 +98,6 @@ app.post('/status', (req, res) => {
     res.sendStatus(200);
 });
 
-// Port binding fix: using 0.0.0.0 for Render's scanner
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`USAKO Server active on port ${PORT}`);
