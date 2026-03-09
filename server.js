@@ -5,7 +5,8 @@ import twilio from 'twilio';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const GoogleAIModule = require('@google/generative-ai');
+// Pull the library using the most stable method for Node v22
+const GoogleAI = require('@google/generative-ai');
 
 dotenv.config();
 
@@ -13,20 +14,11 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
 /**
- * FINAL CONSTRUCTOR FIX:
- * We check every possible location where the GoogleGenAI class might be hidden.
+ * THE ABSOLUTE FIX:
+ * We access the .GoogleGenAI property directly from the required module.
+ * This prevents the "is not a constructor" error.
  */
-let GoogleGenAI;
-if (typeof GoogleAIModule.GoogleGenAI === 'function') {
-    GoogleGenAI = GoogleAIModule.GoogleGenAI;
-} else if (GoogleAIModule.default && typeof GoogleAIModule.default.GoogleGenAI === 'function') {
-    GoogleGenAI = GoogleAIModule.default.GoogleGenAI;
-} else {
-    // Fallback for some specific Node versions
-    GoogleGenAI = GoogleAIModule;
-}
-
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleAI.GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-1.5-flash"; 
 
 const sessions = new Map();
@@ -56,7 +48,7 @@ app.post('/voice', async (req, res) => {
         });
     } catch (error) {
         console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message.");
+        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
         twiml.record({ maxLength: 30 });
     }
 
@@ -96,6 +88,7 @@ app.post('/status', (req, res) => {
     res.sendStatus(200);
 });
 
+// Port binding fix: using 0.0.0.0 for Render's scanner
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`USAKO Server active on port ${PORT}`);
