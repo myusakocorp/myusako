@@ -1,6 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import * as GoogleAI from "@google/generative-ai"; 
+import { GoogleGenAI } from "@google/generative-ai"; // Direct named import
 import dotenv from 'dotenv';
 import twilio from 'twilio';
 
@@ -9,8 +9,8 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Access the constructor from the namespace to avoid "not a constructor" errors
-const genAI = new GoogleAI.GoogleGenAI(process.env.GEMINI_API_KEY);
+// Initialize the SDK - this matches the direct named import above
+const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash";
 
 const sessions = new Map();
@@ -21,7 +21,7 @@ app.post('/voice', async (req, res) => {
 
     const model = genAI.getGenerativeModel({ 
         model: MODEL_NAME,
-        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. Do not use markdown or bolding.",
+        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown or bolding.",
     });
 
     const chat = model.startChat();
@@ -29,7 +29,6 @@ app.post('/voice', async (req, res) => {
 
     try {
         const result = await chat.sendMessage("Greet the caller and ask how you can help.");
-        // Use .response.text() as per latest SDK
         twiml.say(result.response.text());
         twiml.gather({
             input: 'speech',
@@ -71,7 +70,6 @@ app.post('/respond', async (req, res) => {
     res.type('text/xml').send(twiml.toString());
 });
 
-// Cleanup session when call ends
 app.post('/status', (req, res) => {
     if (req.body.CallStatus === 'completed') {
         sessions.delete(req.body.CallSid);
@@ -79,7 +77,6 @@ app.post('/status', (req, res) => {
     res.sendStatus(200);
 });
 
-// Port binding fix: Use 0.0.0.0 to ensure Render's port scanner detects the service
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`USAKO Server active on port ${PORT}`);
