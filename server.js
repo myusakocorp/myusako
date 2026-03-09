@@ -4,16 +4,28 @@ import dotenv from 'dotenv';
 import twilio from 'twilio';
 import { createRequire } from 'module';
 
-// This creates a 'require' function that works inside your ES module
 const require = createRequire(import.meta.url);
-const { GoogleGenAI } = require('@google/generative-ai');
+const GoogleAIModule = require('@google/generative-ai');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK - this will now work because GoogleGenAI is correctly defined
+/**
+ * FINAL CONSTRUCTOR FIX:
+ * We check every possible location where the GoogleGenAI class might be hidden.
+ */
+let GoogleGenAI;
+if (typeof GoogleAIModule.GoogleGenAI === 'function') {
+    GoogleGenAI = GoogleAIModule.GoogleGenAI;
+} else if (GoogleAIModule.default && typeof GoogleAIModule.default.GoogleGenAI === 'function') {
+    GoogleGenAI = GoogleAIModule.default.GoogleGenAI;
+} else {
+    // Fallback for some specific Node versions
+    GoogleGenAI = GoogleAIModule;
+}
+
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-1.5-flash"; 
 
@@ -26,7 +38,7 @@ app.post('/voice', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Speak naturally and do not use any markdown, bolding, or asterisks.",
+            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. No markdown, bolding, or asterisks.",
         });
 
         const chat = model.startChat();
@@ -44,7 +56,7 @@ app.post('/voice', async (req, res) => {
         });
     } catch (error) {
         console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
+        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message.");
         twiml.record({ maxLength: 30 });
     }
 
@@ -86,5 +98,5 @@ app.post('/status', (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`USAKO Server active on port ${PORT}`);
 });
