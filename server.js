@@ -1,19 +1,16 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import * as GoogleAI from "@google/generative-ai"; 
 import dotenv from 'dotenv';
 import twilio from 'twilio';
-import { createRequire } from 'module';
-
-// Standard ESM fix for libraries that struggle with named exports
-const require = createRequire(import.meta.url);
-const { GoogleGenAI } = require('@google/generative-ai');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+// Access the constructor from the namespace to avoid "not a constructor" errors
+const genAI = new GoogleAI.GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash";
 
 const sessions = new Map();
@@ -24,7 +21,7 @@ app.post('/voice', async (req, res) => {
 
     const model = genAI.getGenerativeModel({ 
         model: MODEL_NAME,
-        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown.",
+        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. Do not use markdown or bolding.",
     });
 
     const chat = model.startChat();
@@ -32,6 +29,7 @@ app.post('/voice', async (req, res) => {
 
     try {
         const result = await chat.sendMessage("Greet the caller and ask how you can help.");
+        // Use .response.text() as per latest SDK
         twiml.say(result.response.text());
         twiml.gather({
             input: 'speech',
@@ -40,9 +38,11 @@ app.post('/voice', async (req, res) => {
             enhanced: true
         });
     } catch (error) {
-        twiml.say("Welcome to USAKO. We are having technical difficulties.");
-        twiml.hangup();
+        console.error("AI Error:", error);
+        twiml.say("Welcome to USAKO. We are having technical difficulties. Please leave a message.");
+        twiml.record({ maxLength: 30 });
     }
+
     res.type('text/xml').send(twiml.toString());
 });
 
@@ -59,18 +59,28 @@ app.post('/respond', async (req, res) => {
             twiml.say(responseText);
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
-            twiml.say("I'm sorry, I didn't catch that.");
+            twiml.say("I'm sorry, I didn't catch that. Could you repeat it?");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
+        console.error("Response Error:", error);
         twiml.hangup();
         sessions.delete(callSid);
     }
+
     res.type('text/xml').send(twiml.toString());
 });
 
-// IMPORTANT: Fix for Port scan timeout
+// Cleanup session when call ends
+app.post('/status', (req, res) => {
+    if (req.body.CallStatus === 'completed') {
+        sessions.delete(req.body.CallSid);
+    }
+    res.sendStatus(200);
+});
+
+// Port binding fix: Use 0.0.0.0 to ensure Render's port scanner detects the service
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`USAKO Server listening on port ${PORT}`);
+    console.log(`USAKO Server active on port ${PORT}`);
 });
