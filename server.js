@@ -1,25 +1,20 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import * as GoogleAI from '@google/generative-ai';
 import dotenv from 'dotenv';
 import twilio from 'twilio';
+import { createRequire } from 'module';
+
+// Official Node.js way to safely load CommonJS into ESM
+const require = createRequire(import.meta.url);
+const { GoogleGenAI } = require('@google/generative-ai');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// This block handles every possible way Node v22 imports the Google SDK
-const getGoogleConstructor = () => {
-    if (GoogleAI.GoogleGenAI) return GoogleAI.GoogleGenAI;
-    if (GoogleAI.default && GoogleAI.default.GoogleGenAI) return GoogleAI.default.GoogleGenAI;
-    return GoogleAI.default;
-};
-
-const GoogleGenAI = getGoogleConstructor();
+// Initialize the SDK - this is now a direct class reference
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-
-// Use 1.5-flash: It is more compatible with the free tier and current SDKs
 const MODEL_NAME = "gemini-1.5-flash"; 
 
 const sessions = new Map();
@@ -31,7 +26,7 @@ app.post('/voice', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Speak naturally and do not use any markdown, bolding, or asterisks.",
+            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. No markdown, bolding, or asterisks.",
         });
 
         const chat = model.startChat();
@@ -49,7 +44,7 @@ app.post('/voice', async (req, res) => {
         });
     } catch (error) {
         console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
+        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message.");
         twiml.record({ maxLength: 30 });
     }
 
