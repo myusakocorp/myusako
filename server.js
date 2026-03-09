@@ -9,10 +9,10 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize Gemini 2.0 - The new 2026 stable standard
+// Initialize gemini-2.5-flash - The new 2026 stable standard
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Use 'gemini-2.0-flash' to avoid the 404 error from retired 1.5 models
+// Use 'gemini-2.5-flash' to avoid the 404 error from retired 1.5 models
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 app.get('/', (req, res) => {
@@ -69,3 +69,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
 });
+
