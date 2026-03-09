@@ -2,27 +2,34 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import twilio from 'twilio';
-import { GoogleGenAI } from '@google/generative-ai';
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK directly using the named export
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-2.0-flash";
-
+// We'll initialize these inside an async setup to handle the import correctly
+let genAI;
+let MODEL_NAME = "gemini-2.0-flash";
 const sessions = new Map();
+
+async function initializeAI() {
+    // This dynamic import is the fix for the "not a constructor" error
+    const { GoogleGenAI } = await import('@google/generative-ai');
+    genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    console.log("AI Model Initialized");
+}
 
 app.post('/voice', async (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
     const callSid = req.body.CallSid;
 
     try {
+        if (!genAI) await initializeAI();
+
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown.",
+            systemInstruction: "You are a professional receptionist. Be warm and concise. No markdown.",
         });
 
         const chat = model.startChat();
@@ -37,8 +44,8 @@ app.post('/voice', async (req, res) => {
             enhanced: true
         });
     } catch (error) {
-        console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are having technical difficulties.");
+        console.error("Voice Error:", error);
+        twiml.say("We are experiencing technical difficulties. Please try again later.");
         twiml.hangup();
     }
     res.type('text/xml').send(twiml.toString());
@@ -57,7 +64,7 @@ app.post('/respond', async (req, res) => {
             twiml.say(responseText);
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
-            twiml.say("I'm sorry, I didn't catch that.");
+            twiml.say("I didn't catch that. Could you repeat it?");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
@@ -67,7 +74,13 @@ app.post('/respond', async (req, res) => {
     res.type('text/xml').send(twiml.toString());
 });
 
+// Start server
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`USAKO Server active on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`Server listening on port ${PORT}`);
+    try {
+        await initializeAI();
+    } catch (err) {
+        console.error("Failed to initialize AI on startup:", err);
+    }
 });
