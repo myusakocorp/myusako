@@ -1,15 +1,19 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { GoogleGenAI } from "@google/generative-ai"; // Direct named import
 import dotenv from 'dotenv';
 import twilio from 'twilio';
+import { createRequire } from 'module';
+
+// Standard ESM fix for libraries that struggle with named exports
+const require = createRequire(import.meta.url);
+const { GoogleGenAI } = require('@google/generative-ai');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK - this matches the direct named import above
+// Initialize the SDK using the required class
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash";
 
