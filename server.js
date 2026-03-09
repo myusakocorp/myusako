@@ -2,18 +2,14 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import twilio from 'twilio';
-import { createRequire } from 'module';
-
-// Standard ESM fix for libraries that struggle with named exports
-const require = createRequire(import.meta.url);
-const { GoogleGenAI } = require('@google/generative-ai');
+import { GoogleGenAI } from '@google/generative-ai';
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK using the required class
+// Initialize the SDK directly using the named export
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash";
 
@@ -23,15 +19,15 @@ app.post('/voice', async (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
     const callSid = req.body.CallSid;
 
-    const model = genAI.getGenerativeModel({ 
-        model: MODEL_NAME,
-        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown or bolding.",
-    });
-
-    const chat = model.startChat();
-    sessions.set(callSid, chat);
-
     try {
+        const model = genAI.getGenerativeModel({ 
+            model: MODEL_NAME,
+            systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown.",
+        });
+
+        const chat = model.startChat();
+        sessions.set(callSid, chat);
+
         const result = await chat.sendMessage("Greet the caller and ask how you can help.");
         twiml.say(result.response.text());
         twiml.gather({
@@ -42,10 +38,9 @@ app.post('/voice', async (req, res) => {
         });
     } catch (error) {
         console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are having technical difficulties. Please leave a message.");
-        twiml.record({ maxLength: 30 });
+        twiml.say("Welcome to USAKO. We are having technical difficulties.");
+        twiml.hangup();
     }
-
     res.type('text/xml').send(twiml.toString());
 });
 
@@ -62,23 +57,14 @@ app.post('/respond', async (req, res) => {
             twiml.say(responseText);
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
-            twiml.say("I'm sorry, I didn't catch that. Could you repeat it?");
+            twiml.say("I'm sorry, I didn't catch that.");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
-        console.error("Response Error:", error);
         twiml.hangup();
         sessions.delete(callSid);
     }
-
     res.type('text/xml').send(twiml.toString());
-});
-
-app.post('/status', (req, res) => {
-    if (req.body.CallStatus === 'completed') {
-        sessions.delete(req.body.CallSid);
-    }
-    res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 10000;
