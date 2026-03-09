@@ -9,10 +9,18 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Robust constructor selection for Node v22 ESM
-const GoogleGenAI = GoogleAI.GoogleGenAI || (GoogleAI.default && GoogleAI.default.GoogleGenAI);
+// This block handles every possible way Node v22 imports the Google SDK
+const getGoogleConstructor = () => {
+    if (GoogleAI.GoogleGenAI) return GoogleAI.GoogleGenAI;
+    if (GoogleAI.default && GoogleAI.default.GoogleGenAI) return GoogleAI.default.GoogleGenAI;
+    return GoogleAI.default;
+};
+
+const GoogleGenAI = getGoogleConstructor();
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-1.5-flash"; // Using 1.5-flash for maximum stability/quota
+
+// Use 1.5-flash: It is more compatible with the free tier and current SDKs
+const MODEL_NAME = "gemini-1.5-flash"; 
 
 const sessions = new Map();
 
@@ -23,7 +31,7 @@ app.post('/voice', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Do not use markdown or asterisks.",
+            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Speak naturally and do not use any markdown, bolding, or asterisks.",
         });
 
         const chat = model.startChat();
@@ -40,8 +48,8 @@ app.post('/voice', async (req, res) => {
             enhanced: true
         });
     } catch (error) {
-        console.error("Voice Error:", error);
-        twiml.say("Welcome to USAKO. We are currently experiencing technical difficulties, but please leave a message.");
+        console.error("AI Error:", error);
+        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
         twiml.record({ maxLength: 30 });
     }
 
@@ -66,7 +74,7 @@ app.post('/respond', async (req, res) => {
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
-        console.error("Response Error:", error);
+        console.error("Chat Error:", error);
         twiml.hangup();
         sessions.delete(callSid);
     }
@@ -83,5 +91,5 @@ app.post('/status', (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`USAKO Server active on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
