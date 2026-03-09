@@ -1,15 +1,18 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { GoogleGenAI } from "@google/generative-ai"; // Standard named import
 import dotenv from 'dotenv';
 import twilio from 'twilio';
+import { createRequire } from 'module';
+
+// Standard ESM fix for libraries that struggle with named exports
+const require = createRequire(import.meta.url);
+const { GoogleGenAI } = require('@google/generative-ai');
 
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK correctly
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash";
 
@@ -21,7 +24,7 @@ app.post('/voice', async (req, res) => {
 
     const model = genAI.getGenerativeModel({ 
         model: MODEL_NAME,
-        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. Do not use markdown or bolding.",
+        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. No markdown.",
     });
 
     const chat = model.startChat();
@@ -37,11 +40,9 @@ app.post('/voice', async (req, res) => {
             enhanced: true
         });
     } catch (error) {
-        console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are having technical difficulties. Please leave a message.");
-        twiml.record({ maxLength: 30 });
+        twiml.say("Welcome to USAKO. We are having technical difficulties.");
+        twiml.hangup();
     }
-
     res.type('text/xml').send(twiml.toString());
 });
 
@@ -65,9 +66,11 @@ app.post('/respond', async (req, res) => {
         twiml.hangup();
         sessions.delete(callSid);
     }
-
     res.type('text/xml').send(twiml.toString());
 });
 
+// IMPORTANT: Fix for Port scan timeout
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`USAKO Server listening on port ${PORT}`);
+});
