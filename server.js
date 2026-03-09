@@ -10,7 +10,7 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-1.5-flash"; 
+const MODEL_NAME = "gemini-2.0-flash"; 
 
 const sessions = new Map();
 
@@ -38,7 +38,7 @@ app.post('/voice', async (req, res) => {
             enhanced: true
         });
     } catch (error) {
-        console.error("AI Error:", error);
+        console.error("AI Error:", error.message || error);
         twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
         twiml.record({ maxLength: 30 });
     }
@@ -64,7 +64,7 @@ app.post('/respond', async (req, res) => {
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
-        console.error("Chat Error:", error);
+        console.error("Chat Error:", error.message || error);
         twiml.hangup();
         sessions.delete(callSid);
     }
