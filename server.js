@@ -1,6 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import twilio from 'twilio';
 
@@ -9,64 +9,78 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize gemini-2.5-flash - The new 2026 stable standard
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize the 2026 SDK and the stable Flash model
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL_NAME = "gemini-2.5-flash";
 
-// Use 'gemini-2.5-flash' to avoid the 404 error from retired 1.5 models
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-app.get('/', (req, res) => {
-    res.send('USAKO AI Receptionist is Online.');
-});
+// Simple in-memory store for conversation history (Use Redis for production)
+const sessions = new Map();
 
 app.post('/voice', async (req, res) => {
-    console.log("Incoming call detected...");
     const twiml = new twilio.twiml.VoiceResponse();
+    const callSid = req.body.CallSid;
+
+    // Initialize a fresh chat session for this caller
+    const chat = ai.models.startChat({
+        model: MODEL_NAME,
+        systemInstruction: "You are the professional AI receptionist for USAKO. Be warm, concise, and helpful. Do not use bolding or markdown in your speech.",
+    });
+    
+    sessions.set(callSid, chat);
 
     try {
-        const prompt = "You are the professional AI receptionist for USAKO. Greet the caller warmly and ask how you can help. Keep it very brief.";
-        const result = await model.generateContent(prompt);
-        const aiResponse = result.response.text();
-
-        twiml.say(aiResponse);
+        const result = await chat.sendMessage("Greet the caller and ask how you can help.");
+        
+        twiml.say(result.text);
         twiml.gather({
             input: 'speech',
             action: '/respond',
-            timeout: 3
+            timeout: 5,
+            enhanced: true // Uses higher quality speech-to-text
         });
 
     } catch (error) {
-        console.error("AI Brain Error:", error.message);
-        twiml.say("Welcome to USAKO. I'm having a connection issue. Please leave your name and number.");
-        twiml.record({ maxLength: 20 });
+        console.error("AI Error:", error);
+        twiml.say("Welcome to USAKO. We're having technical difficulties. Please leave a message.");
+        twiml.record({ maxLength: 30 });
     }
 
-    res.type('text/xml');
-    res.send(twiml.toString());
+    res.type('text/xml').send(twiml.toString());
 });
 
 app.post('/respond', async (req, res) => {
-    const userSpeech = req.body.SpeechResult;
     const twiml = new twilio.twiml.VoiceResponse();
+    const callSid = req.body.CallSid;
+    const userSpeech = req.body.SpeechResult;
+    const chat = sessions.get(callSid);
 
     try {
-        if (userSpeech) {
-            const result = await model.generateContent(userSpeech);
-            twiml.say(result.response.text());
+        if (userSpeech && chat) {
+            // sendMessage maintains the history automatically
+            const result = await chat.sendMessage(userSpeech);
+            twiml.say(result.text);
             twiml.gather({ input: 'speech', action: '/respond' });
         } else {
+            // If they didn't say anything, prompt them again
+            twiml.say("I'm sorry, I didn't catch that. Could you repeat it?");
             twiml.gather({ input: 'speech', action: '/respond' });
         }
     } catch (error) {
+        console.error("Response Error:", error);
         twiml.hangup();
+        sessions.delete(callSid); // Clean up memory
     }
 
-    res.type('text/xml');
-    res.send(twiml.toString());
+    res.type('text/xml').send(twiml.toString());
+});
+
+// Cleanup session when call ends
+app.post('/status', (req, res) => {
+    if (req.body.CallStatus === 'completed') {
+        sessions.delete(req.body.CallSid);
+    }
+    res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-});
-
+app.listen(PORT, () => console.log(`USAKO Server active on port ${PORT}`));
