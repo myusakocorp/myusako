@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import twilio from 'twilio';
 import { createRequire } from 'module';
 
-// Official Node.js way to safely load CommonJS into ESM
+// This creates a 'require' function that works inside your ES module
 const require = createRequire(import.meta.url);
 const { GoogleGenAI } = require('@google/generative-ai');
 
@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Initialize the SDK - this is now a direct class reference
+// Initialize the SDK - this will now work because GoogleGenAI is correctly defined
 const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-1.5-flash"; 
 
@@ -26,7 +26,7 @@ app.post('/voice', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
-            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. No markdown, bolding, or asterisks.",
+            systemInstruction: "You are a professional receptionist for USAKO. Be warm and concise. Speak naturally and do not use any markdown, bolding, or asterisks.",
         });
 
         const chat = model.startChat();
@@ -44,7 +44,7 @@ app.post('/voice', async (req, res) => {
         });
     } catch (error) {
         console.error("AI Error:", error);
-        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message.");
+        twiml.say("Welcome to USAKO. We are currently experiencing heavy call volume. Please leave a message after the tone.");
         twiml.record({ maxLength: 30 });
     }
 
