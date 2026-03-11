@@ -1,5 +1,7 @@
 {
-  "name": "USAKO Virtual Receptionist",
-  "description": "An AI-powered IVR and virtual receptionist system for United Solutions Assisting Kinder Ones (USAKO), providing immediate support to unhoused neighbors.",
-  "requestFramePermissions": ["microphone"]
+  "name": "USAKO INTRANET ",
+  "description": "",
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

@@ -1,58 +1,33 @@
-/**
- * Adds a WAV header to raw PCM data.
- * Assumes 16-bit, Mono, 24000Hz PCM data.
- */
-export function addWavHeader(pcmBase64: string, sampleRate: number = 24000): string {
-  const pcmData = Uint8Array.from(atob(pcmBase64), c => c.charCodeAt(0));
-  const buffer = new ArrayBuffer(44 + pcmData.length);
+export function addWavHeader(base64Data: string, sampleRate: number = 24000): string {
+  const rawData = atob(base64Data);
+  const dataLength = rawData.length;
+  const buffer = new ArrayBuffer(44 + dataLength);
   const view = new DataView(buffer);
 
-  /* RIFF identifier */
-  writeString(view, 0, 'RIFF');
-  /* file length */
-  view.setUint32(4, 36 + pcmData.length, true);
-  /* RIFF type */
-  writeString(view, 8, 'WAVE');
-  /* format chunk identifier */
-  writeString(view, 12, 'fmt ');
-  /* format chunk length */
-  view.setUint32(16, 16, true);
-  /* sample format (raw PCM) */
-  view.setUint16(20, 1, true);
-  /* channel count */
-  view.setUint16(22, 1, true);
-  /* sample rate */
-  view.setUint32(24, sampleRate, true);
-  /* byte rate (sample rate * block align) */
-  view.setUint32(28, sampleRate * 2, true);
-  /* block align (channel count * bytes per sample) */
-  view.setUint16(32, 2, true);
-  /* bits per sample */
-  view.setUint16(34, 16, true);
-  /* data chunk identifier */
-  writeString(view, 36, 'data');
-  /* data chunk length */
-  view.setUint32(40, pcmData.length, true);
+  // RIFF identifier
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  view.setUint32(4, 36 + dataLength, true); // File size
+  view.setUint32(8, 0x57415645, false); // "WAVE"
 
-  /* write PCM samples */
-  const output = new Uint8Array(buffer);
-  output.set(pcmData, 44);
+  // fmt chunk
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+  view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+  view.setUint16(22, 1, true); // NumChannels (1 for mono)
+  view.setUint32(24, sampleRate, true); // SampleRate
+  view.setUint32(28, sampleRate * 2, true); // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+  view.setUint16(32, 2, true); // BlockAlign (NumChannels * BitsPerSample/8)
+  view.setUint16(34, 16, true); // BitsPerSample
 
-  return arrayBufferToBase64(buffer);
-}
+  // data chunk
+  view.setUint32(36, 0x64617461, false); // "data"
+  view.setUint32(40, dataLength, true); // Subchunk2Size
 
-function writeString(view: DataView, offset: number, string: string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
+  // Write PCM data
+  for (let i = 0; i < dataLength; i++) {
+    view.setUint8(44 + i, rawData.charCodeAt(i));
   }
-}
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
 }
