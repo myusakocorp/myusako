@@ -953,6 +953,8 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
   // --- Twilio Softphone Token ---
   app.get("/api/twilio/token", (req, res) => {
     const currentUser = getAuthUser(req);
+    if (!currentUser) return res.status(401).json({ error: "Unauthorized" });
+
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const apiKey = process.env.TWILIO_API_KEY;
     const apiSecret = process.env.TWILIO_API_SECRET;
@@ -1426,6 +1428,9 @@ Press or Say 0 for the operator.`;
   });
 
   app.post("/api/calls/log", (req, res) => {
+    const currentUser = getAuthUser(req);
+    if (!currentUser) return res.status(401).json({ error: "Unauthorized" });
+
     const { direction, from_number, to_number, status, duration } = req.body;
     db.prepare("INSERT INTO calls (direction, from_number, to_number, status, duration) VALUES (?, ?, ?, ?, ?)")
       .run(direction, from_number, to_number, status, duration || 0);
