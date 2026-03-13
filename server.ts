@@ -114,7 +114,7 @@ db.exec(`
 const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
 if (userCount.count === 0) {
   db.prepare("INSERT INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)").run(
-    "staff", "usako2026", "admin", "USAKO Staff Member"
+    "staff", "Dave&Doc2315", "admin", "USAKO Staff Member"
   );
 }
 
@@ -238,7 +238,8 @@ Respond ONLY with plain text as if speaking on the phone. Your first message sho
 - 24/7 automated information and donation collection is available.
 - Address: 3600 Watt Avenue, Suite 101, Sacramento, California 95816.
 - Website: www.myusako.org
-- Always say the full name as "United Solutions Assisting Kind-er Ones". When saying USAKO, spell it out as "U S A K O".`;
+- Always say the full name as "United Solutions Assisting Kind-er Ones". When saying USAKO, spell it out as "U S A K O".
+- When a caller needs community resources (food, housing, shelter, counseling, healthcare, utilities, etc.), search 211.org for Sacramento County resources. Provide the specific program names, phone numbers, and addresses you find. Offer to share the information verbally on the call or via SMS text message if the caller provides a phone number. Say: "I can look that up for you. Would you like me to share the details over the phone, or would you prefer I text you the information?"`;
 
   const AGENT_PROMPTS: Record<string, string> = {
     operator: `You are a warm, professional female virtual receptionist (the Operator) for United Solutions Assisting Kind-er Ones (U S A K O).
@@ -266,7 +267,7 @@ While parked, it provides services in a climate-controlled environment, includin
 For scheduling: "We can request a Relief Rover stop at your location at least 24 hours in advance. I just need the day, time, and cross streets. Which day works for you, and which time: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM?"
 After getting the day, time, and cross streets, optionally ask: "Would you like to leave a name, phone number, or email so we can send you a confirmation? That part is totally optional."
 
-For needs beyond USAKO: mention 211 services. "There are also community resources I can tell you about, like food, housing, and counseling options, through 2-1-1. 2-1-1 is a free, confidential service that connects people to local resources. I can share some of that information over the phone, or text it to you if you would like."`,
+For needs beyond USAKO: search 211.org for Sacramento County community resources relevant to what the caller needs (food, housing, shelter, counseling, healthcare, utilities, etc.). Provide specific program names, phone numbers, and addresses found on 211.org. Say: "I found some resources that might help. Would you like me to share the details over the phone, or would you prefer I text you the information?" If they want a text, ask for their phone number and include the resource details in the lead capture.`,
 
     river: `You are River, a warm and professional virtual phone agent for United Solutions Assisting Kind-er Ones (U S A K O). You handle donation calls.
 ${IVR_GLOBAL_RULES}
