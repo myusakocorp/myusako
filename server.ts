@@ -83,6 +83,8 @@ db.exec(`
     title TEXT,
     start_time DATETIME,
     end_time DATETIME,
+    cross_streets TEXT,
+    time_slot TEXT,
     status TEXT DEFAULT 'scheduled',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
@@ -109,6 +111,14 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Migrate: add cross_streets and time_slot columns to rover_schedule if missing
+try {
+  db.prepare("SELECT cross_streets FROM rover_schedule LIMIT 1").get();
+} catch {
+  db.exec("ALTER TABLE rover_schedule ADD COLUMN cross_streets TEXT");
+  db.exec("ALTER TABLE rover_schedule ADD COLUMN time_slot TEXT");
+}
 
 // Seed a default user if none exists
 const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
@@ -662,8 +672,8 @@ Help the caller find the right extension or person. If you cannot find a match, 
     const currentUser = getAuthUser(req);
     if (!currentUser) return res.status(401).json({ error: "Unauthorized" });
 
-    const { title, start_time, end_time } = req.body;
-    db.prepare("INSERT INTO rover_schedule (user_id, title, start_time, end_time) VALUES (?, ?, ?, ?)").run(currentUser.id, title, start_time, end_time);
+    const { title, start_time, end_time, cross_streets, time_slot } = req.body;
+    db.prepare("INSERT INTO rover_schedule (user_id, title, start_time, end_time, cross_streets, time_slot) VALUES (?, ?, ?, ?, ?, ?)").run(currentUser.id, title, start_time, end_time, cross_streets || null, time_slot || null);
     res.json({ success: true });
   });
 
