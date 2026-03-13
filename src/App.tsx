@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Hash, Shield, Truck, CassetteTape, Plus, Trash2, Edit2, Save, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { addWavHeader } from "./utils/audioUtils";
+import { speakText, stopSpeech, testAudio, isSpeechSupported } from "./utils/speechUtils";
 import DOMPurify from "dompurify";
 import { io, Socket } from "socket.io-client";
 import FullCalendar from "@fullcalendar/react";
@@ -47,7 +47,7 @@ interface UserData {
 // --- App Component ---
 export default function App() {
   const [user, setUser] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "messaging" | "calendar" | "video" | "phone" | "mail" | "rover" | "voicemail" | "user-management" | "setup">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "mission" | "messaging" | "calendar" | "video" | "phone" | "mail" | "rover" | "voicemail" | "user-management" | "setup">("dashboard");
   const [phoneSubTab, setPhoneSubTab] = useState<"simulator" | "softphone">("simulator");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
@@ -77,6 +77,9 @@ export default function App() {
   const [simInput, setSimInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState<string>("menu");
+  const [audioTestPassed, setAudioTestPassed] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const simEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -546,10 +549,12 @@ export default function App() {
     setChatInput("");
   };
 
-  // --- Phone Simulator Logic ---
+  // --- Phone Simulator Logic (IVR menu flow + SpeechSynthesis TTS) ---
   const startSimulation = async () => {
     setSimMessages([]);
+    setCurrentAgent("menu");
     setIsProcessing(true);
+    stopSpeech();
     try {
       const res = await apiFetch("/api/chat", {
         method: "POST",
@@ -557,14 +562,18 @@ export default function App() {
         body: JSON.stringify({ message: "START_CALL" }),
       });
       const data = await res.json();
-      const audioUrl = data.audio ? addWavHeader(data.audio) : undefined;
-      setSimMessages([{ role: "agent", text: data.text, audio: audioUrl }]);
-      if (audioUrl) playAudio(audioUrl);
+      setCurrentAgent(data.agent || "menu");
+      setSimMessages([{ role: "agent", text: data.text }]);
+      // Auto-play TTS after a short delay for UI to render
+      setTimeout(() => {
+        speakText(data.text, data.agent || "menu").catch(console.error);
+      }, 500);
     } catch (e) { console.error(e); } finally { setIsProcessing(false); }
   };
 
   const sendSimMessage = async (text: string) => {
     if (!text.trim() || isProcessing) return;
+    stopSpeech();
     setSimMessages(prev => [...prev, { role: "user", text }]);
     setSimInput("");
     setIsProcessing(true);
@@ -575,16 +584,27 @@ export default function App() {
         body: JSON.stringify({ message: text }),
       });
       const data = await res.json();
-      const audioUrl = data.audio ? addWavHeader(data.audio) : undefined;
-      setSimMessages(prev => [...prev, { role: "agent", text: data.text, audio: audioUrl }]);
-      if (audioUrl) playAudio(audioUrl);
+      const agent = data.agent || currentAgent;
+      setCurrentAgent(agent);
+      setSimMessages(prev => [...prev, { role: "agent", text: data.text }]);
+      // Auto-play TTS
+      setIsAudioLoading(true);
+      speakText(data.text, agent).catch(console.error).finally(() => setIsAudioLoading(false));
     } catch (e) { console.error(e); } finally { setIsProcessing(false); }
   };
 
-  const playAudio = (url: string) => {
-    if (audioRef.current) {
-      audioRef.current.src = url;
-      audioRef.current.play();
+  const replayMessage = (text: string, agent: string) => {
+    stopSpeech();
+    speakText(text, agent).catch(console.error);
+  };
+
+  const handleTestAudio = async () => {
+    try {
+      await testAudio();
+      setAudioTestPassed(true);
+    } catch (e) {
+      console.error("Audio test failed:", e);
+      alert("Audio test failed. Please check your browser settings and speaker volume.");
     }
   };
 
@@ -736,6 +756,7 @@ export default function App() {
 
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
           <SidebarItem active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} icon={<LayoutDashboard size={18} />} label="Dashboard" />
+          <SidebarItem active={activeTab === "mission"} onClick={() => setActiveTab("mission")} icon={<Heart size={18} />} label="Our Mission" />
           <SidebarItem active={activeTab === "messaging"} onClick={() => setActiveTab("messaging")} icon={<MessageSquare size={18} />} label="Staff Chat" />
           <SidebarItem active={activeTab === "calendar"} onClick={() => setActiveTab("calendar")} icon={<CalendarIcon size={18} />} label="Scheduling" />
           <SidebarItem active={activeTab === "video"} onClick={() => setActiveTab("video")} icon={<Video size={18} />} label="Conferencing" />
@@ -916,6 +937,72 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === "mission" && (
+              <motion.div key="mission" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-4xl mx-auto space-y-10">
+                <div className="bg-white p-12 rounded-[48px] shadow-sm border border-black/5 text-center space-y-8">
+                  <div className="w-20 h-20 bg-[#5A5A40]/10 rounded-full flex items-center justify-center mx-auto">
+                    <Heart size={40} className="text-[#5A5A40]" />
+                  </div>
+                  <div className="space-y-4">
+                    <h2 className="text-4xl font-light italic text-[#5A5A40]">United Solutions Assisting Kinder Ones</h2>
+                    <p className="text-sm uppercase tracking-[0.3em] opacity-50">U &bull; S &bull; A &bull; K &bull; O</p>
+                  </div>
+                  <div className="max-w-2xl mx-auto">
+                    <p className="text-lg leading-relaxed italic opacity-80">
+                      "To provide immediate, person-centered support to our unhoused neighbors by delivering essential resources directly to the streets. We believe in meeting people right where they are, serving them right now, and honoring their humanity rightly through consistent, barrier-free care."
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="bg-white p-8 rounded-[40px] shadow-sm border border-black/5 text-center space-y-4">
+                    <Clock size={28} className="mx-auto text-[#5A5A40]" />
+                    <h3 className="font-bold text-sm">Hours of Operation</h3>
+                    <div className="text-sm opacity-70 space-y-1">
+                      <p>Monday - Friday</p>
+                      <p className="font-bold">8:00 AM - 5:00 PM PST</p>
+                      <p className="text-xs mt-2 opacity-50">24/7 automated info &amp; donations</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[40px] shadow-sm border border-black/5 text-center space-y-4">
+                    <MapPin size={28} className="mx-auto text-[#5A5A40]" />
+                    <h3 className="font-bold text-sm">Our Location</h3>
+                    <div className="text-sm opacity-70 space-y-1">
+                      <p>3600 Watt Avenue</p>
+                      <p>Suite 101</p>
+                      <p>Sacramento, California 95816</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[40px] shadow-sm border border-black/5 text-center space-y-4">
+                    <Globe size={28} className="mx-auto text-[#5A5A40]" />
+                    <h3 className="font-bold text-sm">Connect With Us</h3>
+                    <div className="text-sm opacity-70 space-y-1">
+                      <p><a href="https://www.myusako.org" target="_blank" rel="noreferrer" className="underline hover:text-[#5A5A40]">www.myusako.org</a></p>
+                      <p>+1 (855) 528-9741</p>
+                      <p className="text-xs mt-2 opacity-50">Relief Rover R.E.A. Service</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-10 rounded-[48px] shadow-sm border border-black/5 space-y-6">
+                  <h3 className="text-2xl font-light italic text-center">Relief Rover R.E.A.</h3>
+                  <p className="text-center text-sm opacity-50 uppercase tracking-widest">Rapid Emergency Assistance</p>
+                  <p className="text-sm leading-relaxed opacity-80 max-w-2xl mx-auto text-center">
+                    The Relief Rover R.E.A. is a converted motorhome that drives to locations where unhoused neighbors are staying. It provides services in a climate-controlled environment including: bicycle repair, secured pet cages, cell phone charging, computer and print stations, government phone signup, SNAP and CalWORKs application help, harm reduction services, restroom access, lunch and drink, TV and seating, free Wi-Fi, and pop-up donations.
+                  </p>
+                  <div className="flex justify-center gap-4 flex-wrap">
+                    <span className="px-4 py-2 bg-[#5A5A40]/10 rounded-full text-xs font-bold">10:00 AM</span>
+                    <span className="px-4 py-2 bg-[#5A5A40]/10 rounded-full text-xs font-bold">11:30 AM</span>
+                    <span className="px-4 py-2 bg-[#5A5A40]/10 rounded-full text-xs font-bold">2:00 PM</span>
+                    <span className="px-4 py-2 bg-[#5A5A40]/10 rounded-full text-xs font-bold">3:30 PM</span>
+                  </div>
+                  <p className="text-center text-xs opacity-50">Schedule a visit at least 24 hours in advance. Only day, time, and cross streets required.</p>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === "phone" && (
               <motion.div key="phone" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-4xl mx-auto h-[calc(100vh-200px)] flex flex-col bg-white rounded-[40px] shadow-sm border border-black/5 overflow-hidden">
                 <div className="flex border-b border-black/5">
@@ -942,24 +1029,47 @@ export default function App() {
                             <Phone size={14} />
                           </div>
                           <div>
-                            <h3 className="text-sm font-bold tracking-tight">AI Phone Agent</h3>
-                            <p className="text-[10px] uppercase tracking-widest opacity-50">Powered by Perplexity</p>
+                            <h3 className="text-sm font-bold tracking-tight">IVR Simulator</h3>
+                            <p className="text-[10px] uppercase tracking-widest opacity-50">
+                              {currentAgent === "menu" ? "Main Menu" : `Agent: ${currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}`}
+                              {" "}• Browser TTS
+                            </p>
                           </div>
                         </div>
-                        <button onClick={startSimulation} className="text-[10px] uppercase tracking-widest opacity-50 hover:opacity-100">Reset Agent</button>
+                        <div className="flex items-center gap-3">
+                          {isSpeechSupported() && (
+                            <button onClick={handleTestAudio} className={`text-[10px] uppercase tracking-widest px-3 py-1 rounded-full border transition-all ${audioTestPassed ? "border-emerald-500 text-emerald-600 bg-emerald-50" : "border-[#5A5A40]/30 hover:border-[#5A5A40] opacity-60 hover:opacity-100"}`}>
+                              <span className="flex items-center gap-1"><Volume2 size={10} /> {audioTestPassed ? "Audio OK" : "Test Audio"}</span>
+                            </button>
+                          )}
+                          <button onClick={() => { stopSpeech(); startSimulation(); }} className="text-[10px] uppercase tracking-widest opacity-50 hover:opacity-100">Reset</button>
+                        </div>
                       </div>
                       <div className="flex-1 overflow-y-auto p-10 space-y-6">
                         {simMessages.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
+                          <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-40">
                             <Phone size={64} strokeWidth={1} />
-                            <button onClick={startSimulation} className="px-10 py-4 bg-[#5A5A40] text-white rounded-full font-medium shadow-xl">Initialize AI Agent</button>
+                            <div className="space-y-3">
+                              <p className="text-lg font-light italic">United Solutions Assisting Kinder Ones</p>
+                              <p className="text-xs opacity-60">IVR Phone System Simulator with Voice</p>
+                            </div>
+                            <button onClick={startSimulation} className="px-10 py-4 bg-[#5A5A40] text-white rounded-full font-medium shadow-xl hover:shadow-2xl transition-all">
+                              Start Call
+                            </button>
                           </div>
                         ) : (
                           simMessages.map((msg, i) => (
                             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                               <div className={`max-w-[80%] p-5 rounded-3xl ${msg.role === "user" ? "bg-[#5A5A40] text-white rounded-tr-none" : "bg-[#f5f2ed] rounded-tl-none border border-black/5"}`}>
-                                <p className="text-sm leading-relaxed">{msg.text}</p>
-                                {msg.audio && <button onClick={() => playAudio(msg.audio!)} className="mt-3 text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50 hover:opacity-100"><Play size={10} /> Replay Voice</button>}
+                                <p className="text-sm leading-relaxed whitespace-pre-line">{msg.text}</p>
+                                {msg.role === "agent" && (
+                                  <button 
+                                    onClick={() => replayMessage(msg.text, currentAgent)} 
+                                    className="mt-3 text-[10px] uppercase tracking-widest flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity"
+                                  >
+                                    <Play size={10} /> Replay Voice
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))
@@ -969,15 +1079,18 @@ export default function App() {
                       </div>
                       <div className="p-8 border-t border-black/5 bg-white">
                         <form onSubmit={(e) => { e.preventDefault(); sendSimMessage(simInput); }} className="flex gap-4">
-                          <button type="button" onClick={toggleListening} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-[#f5f2ed] text-[#5A5A40]"}`}>{isListening ? <MicOff size={20} /> : <Mic size={20} />}</button>
+                          <button type="button" onClick={toggleListening} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-[#f5f2ed] text-[#5A5A40]"}`}>
+                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                          </button>
                           <input 
                             type="text" 
-                            value={simInput} 
+                            value={isListening ? "Listening..." : simInput} 
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSimInput(e.target.value)} 
-                            placeholder="Type response to agent..." 
+                            placeholder={currentAgent === "menu" ? "Type 1-5, 0, or speak your selection..." : "Type your response to the agent..."} 
                             className="flex-1 bg-[#f5f2ed] rounded-full px-8 text-sm focus:outline-none" 
+                            disabled={isListening}
                           />
-                          <button type="submit" className="w-14 h-14 bg-[#5A5A40] text-white rounded-full flex items-center justify-center shadow-lg"><Send size={20} /></button>
+                          <button type="submit" disabled={isListening || isProcessing} className="w-14 h-14 bg-[#5A5A40] text-white rounded-full flex items-center justify-center shadow-lg disabled:opacity-50"><Send size={20} /></button>
                         </form>
                       </div>
                     </>

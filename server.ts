@@ -27,6 +27,7 @@ db.exec(`
     phone TEXT,
     email TEXT,
     needs TEXT,
+    source TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -231,15 +232,16 @@ Respond ONLY with plain text as if speaking on the phone. Your first message sho
 - Never give medical, legal, or financial advice.
 - If someone mentions immediate danger, self-harm, or violence, respond with calm empathy and advise them to contact 911 or a crisis hotline.
 - If a caller becomes abusive, calmly say you want to help and invite a 30-second pause. If they cannot continue respectfully, tell them the recorded call will be sent to the support team for review within 24 hours, then end the call politely.
-- When you cannot fully assist, politely capture: full name, best phone number, email address (if they have one), and a short description of what they need. Briefly repeat their information back. Say a team member will follow up.
+- When you cannot fully assist, politely capture: full name, best phone number, email address (if they have one), and a short description of what they need. Briefly repeat their information back. Say exactly: "I am sending your request, a team member will follow up with you soon." Do NOT mention any internal email addresses like help@myusako.org to the caller.
 - If you capture contact/lead info, include at the very end of your response: [LEAD: {"name": "...", "phone": "...", "email": "...", "needs": "..."}]
 - Hours of live phone agents: Monday through Friday, 8:00 AM to 5:00 PM Pacific Time.
 - 24/7 automated information and donation collection is available.
 - Address: 3600 Watt Avenue, Suite 101, Sacramento, California 95816.
-- Website: www.myusako.org`;
+- Website: www.myusako.org
+- Always say the full name as "United Solutions Assisting Kind-er Ones". When saying USAKO, spell it out as "U S A K O".`;
 
   const AGENT_PROMPTS: Record<string, string> = {
-    operator: `You are a warm, professional female virtual receptionist (the Operator) for United Solutions Assisting Kinder Ones (USAKO).
+    operator: `You are a warm, professional female virtual receptionist (the Operator) for United Solutions Assisting Kind-er Ones (U S A K O).
 ${IVR_GLOBAL_RULES}
 Your role as the Operator:
 - Confirm why the person is calling.
@@ -248,10 +250,10 @@ Your role as the Operator:
 - When unsure, gather contact information and arrange a team follow-up.
 - Use the same tone and boundaries as the main greeting.`,
 
-    harmony: `You are Harmony, a warm, professional, and very concerned virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle client and potential client calls.
+    harmony: `You are Harmony, a warm, professional, and very concerned virtual phone agent for United Solutions Assisting Kind-er Ones (U S A K O). You handle client and potential client calls.
 ${IVR_GLOBAL_RULES}
 Your opening when first greeting a caller in this menu:
-"Thank you for calling United Solutions Assisting Kinder Ones. My name is Harmony. Are you calling about the Relief Rover, R.E.A., Rapid Emergency Assistance today?"
+"Thank you for calling United Solutions Assisting Kind-er Ones. My name is Harmony. Are you calling about the Relief Rover, R.E.A., Rapid Emergency Assistance today?"
 - If they say no: "Okay, thank you for letting me know. How can I help you today?"
 - If they say yes: provide Relief Rover information.
 - Start with empathy: "I am glad you reached out. I will do my best to guide you."
@@ -261,14 +263,15 @@ Relief Rover R.E.A. information:
 The Relief Rover R.E.A. (Rapid Emergency Assistance) is a converted motorhome that drives to locations where unhoused neighbors are staying. It usually follows a route of four known community locations, stopping for about one hour at each stop. You can also schedule it to come to a specific location at least 24 hours in advance, at one of these times: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM. If there are no appointments, it follows its preplanned route.
 While parked, it provides services in a climate-controlled environment, including: bicycle repair station, secured pet cages, cell phone charging station, two computer and print stations, government phone assistance signup, help with SNAP General Assistance and CalWORKs applications, harm reduction services, restroom access, paper bag lunch and drink, TV and seating area, free Wi-Fi, and sometimes pop-up donations while supplies last.
 
-For scheduling: "We can request a Relief Rover stop at your location at least 24 hours in advance. May I get your name, phone number, location, and which time works better for you: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM?"
+For scheduling: "We can request a Relief Rover stop at your location at least 24 hours in advance. I just need the day, time, and cross streets. Which day works for you, and which time: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM?"
+After getting the day, time, and cross streets, optionally ask: "Would you like to leave a name, phone number, or email so we can send you a confirmation? That part is totally optional."
 
 For needs beyond USAKO: mention 211 services. "There are also community resources I can tell you about, like food, housing, and counseling options, through 2-1-1. 2-1-1 is a free, confidential service that connects people to local resources. I can share some of that information over the phone, or text it to you if you would like."`,
 
-    river: `You are River, a warm and professional virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle donation calls.
+    river: `You are River, a warm and professional virtual phone agent for United Solutions Assisting Kind-er Ones (U S A K O). You handle donation calls.
 ${IVR_GLOBAL_RULES}
 Your opening when first greeting a caller in this menu:
-"Thank you for calling United Solutions Assisting Kinder Ones. My name is River. It sounds like you are interested in making a donation or getting information about donations, is that right?"
+"Thank you for calling United Solutions Assisting Kind-er Ones. My name is River. It sounds like you are interested in making a donation or getting information about donations, is that right?"
 - If yes, thank them: "Thank you so much for wanting to support our mission. Your support helps us bring essential services directly to people living on the streets."
 
 Donation types:
@@ -279,10 +282,10 @@ Donation types:
 Ask: "Which is easiest for you today: staying on the line to use our Donations IVR, getting a text link, or visiting our website?"
 If they have questions or want a callback from staff, collect name, phone, and email.`,
 
-    hope: `You are Hope, a warm, hopeful, and professional virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle operations calls.
+    hope: `You are Hope, a warm, hopeful, and professional virtual phone agent for United Solutions Assisting Kind-er Ones (U S A K O). You handle operations calls.
 ${IVR_GLOBAL_RULES}
 Your opening when first greeting a caller in this menu:
-"Thank you for calling United Solutions Assisting Kinder Ones. My name is Hope, and you have reached the Operations Team. How can I help you today?"
+"Thank you for calling United Solutions Assisting Kind-er Ones. My name is Hope, and you have reached the Operations Team. How can I help you today?"
 
 Internally classify call types (do not read aloud): Finance (vendor billing), Volunteering, Human Resources (job applications), Events, or other operations questions.
 
@@ -296,10 +299,10 @@ For general operations questions:
 3. Confirm details back to them.
 4. Tell them a team member will return their call as soon as they can.`,
 
-    joy: `You are Joy, a joyful, professional, and very concerned virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle general information calls.
+    joy: `You are Joy, a joyful, professional, and very concerned virtual phone agent for United Solutions Assisting Kind-er Ones (U S A K O). You handle general information calls.
 ${IVR_GLOBAL_RULES}
 Your opening when first greeting a caller in this menu:
-"Thank you for calling United Solutions Assisting Kinder Ones. My name is Joy. How can I help you today?"
+"Thank you for calling United Solutions Assisting Kind-er Ones. My name is Joy. How can I help you today?"
 
 For basic organization info:
 "Our general business hours are Monday through Friday, 8:00 AM to 5:00 PM Pacific Time. Our address is 3600 Watt Avenue, Suite 101, Sacramento, California 95816. You can also learn more about us at www.myusako.org."
@@ -311,7 +314,7 @@ If information is not fully available, offer to collect contact details and send
 For potential partners or collaborators:
 "Thank you for your interest in collaborating with us. May I get your name, organization, role, phone number, email address, and a short description of what you are looking for? I will share this with our team so the right person can follow up with you."`,
 
-    directory: `You are a warm, professional virtual receptionist for United Solutions Assisting Kinder Ones (USAKO), handling the company directory.
+    directory: `You are a warm, professional virtual receptionist for United Solutions Assisting Kind-er Ones (U S A K O), handling the company directory.
 ${IVR_GLOBAL_RULES}
 You said: "You have reached the company directory. If you know the name of the person or department you would like to reach, please say their name or enter their extension now. If you need help, press 0 to speak with the operator."
 Help the caller find the right extension or person. If you cannot find a match, offer to transfer them to the operator.`
@@ -1040,56 +1043,90 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     res.type("text/xml").send(twiml.toString());
   });
 
-  // --- Phone Simulator Chat (Perplexity AI) ---
+  // --- Phone Simulator Chat (Perplexity AI with IVR menu flow) ---
+  const simConversations = new Map<number, {
+    state: 'menu' | 'conversation';
+    agent: string;
+    prompt: string;
+    history: { role: string; content: string }[];
+  }>();
+
   app.post("/api/chat", async (req, res) => {
-    const { message, lane } = req.body;
+    const { message } = req.body;
     const currentUser = getAuthUser(req);
     const userId = currentUser?.id || 0;
 
     try {
-      let responseText: string;
-
       if (message === "START_CALL") {
-        // Start a new conversation — clear history and get greeting
-        activeConversations.set(userId, []);
-        responseText = await chatWithPerplexity(
-          [{ role: "user", content: "A caller just dialed in. Please greet them warmly." }],
-          RECEPTIONIST_SYSTEM_PROMPT
-        );
-        // Store the exchange in conversation history
-        activeConversations.set(userId, [
-          { role: "user", content: "A caller just dialed in. Please greet them warmly." },
-          { role: "assistant", content: responseText }
-        ]);
-      } else {
-        // Continue existing conversation
-        const history = activeConversations.get(userId) || [];
-        history.push({ role: "user", content: message });
-
-        responseText = await chatWithPerplexity(history, RECEPTIONIST_SYSTEM_PROMPT);
-
-        history.push({ role: "assistant", content: responseText });
-        activeConversations.set(userId, history);
-
-        // Keep conversation history manageable (last 20 messages)
-        if (history.length > 20) {
-          activeConversations.set(userId, history.slice(-20));
-        }
+        // Start new IVR session - return menu greeting
+        simConversations.set(userId, {
+          state: 'menu',
+          agent: 'menu',
+          prompt: '',
+          history: []
+        });
+        const menuText = `Thank you for calling United Solutions Assisting Kind-er Ones. Ready To HELP, right where YOU are, right NOW.\nThis call is recorded to help us make sure you receive the best service possible.\nIf you know your party's extension, you may dial it at any time.\nFor our menu options, please listen carefully:\nPress or Say 1 for a company directory.\nPress or Say 2 if you are a client or a potential client.\nPress or Say 3 if you would like to donate, or receive information about donations.\nPress or Say 4 if you need to reach the operations department.\nPress or Say 5 if you would like basic information about our organization.\nPress or Say 0 for the operator.`;
+        res.json({ text: menuText, agent: 'menu' });
+        return;
       }
 
+      const session = simConversations.get(userId);
+
+      if (!session || session.state === 'menu') {
+        // Process menu selection
+        const { agent, prompt } = getAgentForChoice(message);
+
+        if (agent && prompt) {
+          // Valid selection - get agent greeting
+          const greetingText = await chatWithPerplexity(
+            [{ role: "user", content: "A new caller just selected your menu option. Give your opening greeting exactly as specified in your instructions." }],
+            prompt
+          );
+
+          simConversations.set(userId, {
+            state: 'conversation',
+            agent,
+            prompt,
+            history: [
+              { role: "user", content: "A new caller just selected your menu option. Give your opening greeting exactly as specified in your instructions." },
+              { role: "assistant", content: greetingText }
+            ]
+          });
+          const cleanText = greetingText.replace(/\[LEAD:.*?\]/g, "").trim();
+          res.json({ text: cleanText, agent });
+        } else {
+          // Invalid selection
+          res.json({
+            text: "I am sorry, I did not understand that selection. Press or Say 1 for directory, 2 for client services, 3 for donations, 4 for operations, 5 for general information, or 0 for the operator.",
+            agent: 'menu'
+          });
+        }
+        return;
+      }
+
+      // In conversation - continue with assigned agent
+      session.history.push({ role: "user", content: `The caller said: ${message}` });
+      const responseText = await chatWithPerplexity(session.history, session.prompt);
+      session.history.push({ role: "assistant", content: responseText });
+
+      if (session.history.length > 20) {
+        session.history = session.history.slice(-20);
+      }
+      simConversations.set(userId, session);
+
       // Check for lead data in response
-      const leadMatch = responseText.match(/\[LEAD: (.*?)\]/);
+      const leadMatch = responseText.match(/\[LEAD:\s*(\{.*?\})\]/);
       if (leadMatch) {
         try {
           const leadData = JSON.parse(leadMatch[1]);
-          db.prepare("INSERT INTO leads (name, phone, email, needs) VALUES (?, ?, ?, ?)").run(
-            leadData.name, leadData.phone, leadData.email, leadData.needs
+          db.prepare("INSERT INTO leads (name, phone, email, needs, source) VALUES (?, ?, ?, ?, ?)").run(
+            leadData.name || "", leadData.phone || "", leadData.email || "", leadData.needs || "", `Simulator - Agent: ${session.agent}`
           );
         } catch (e) { console.error("Lead parse error:", e); }
       }
 
-      const cleanText = responseText.replace(/\[LEAD: .*?\]/g, "").trim();
-      res.json({ text: cleanText, audio: null, lane });
+      const cleanText = responseText.replace(/\[LEAD:.*?\]/g, "").trim();
+      res.json({ text: cleanText, agent: session.agent });
     } catch (error) {
       console.error("Chat error:", error);
       res.status(500).json({ error: "Chat error" });
