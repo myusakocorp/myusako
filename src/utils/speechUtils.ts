@@ -3,17 +3,18 @@ interface VoiceConfig {
   gender: 'female' | 'male';
   pitch: number;
   rate: number;
+  preferredVoices: string[]; // Preferred voice name patterns (first match wins)
 }
 
 // Distinct voice profiles per agent persona
 const AGENT_VOICES: Record<string, VoiceConfig> = {
-  menu:      { gender: 'female', pitch: 1.0,  rate: 0.92 },
-  harmony:   { gender: 'female', pitch: 1.08, rate: 0.88 }, // warm, concerned
-  river:     { gender: 'male',   pitch: 0.85, rate: 0.94 }, // male, professional
-  hope:      { gender: 'female', pitch: 1.04, rate: 0.93 }, // hopeful, clear
-  joy:       { gender: 'female', pitch: 1.15, rate: 0.98 }, // joyful, bright
-  operator:  { gender: 'female', pitch: 1.0,  rate: 0.92 },
-  directory: { gender: 'female', pitch: 1.0,  rate: 0.95 },
+  menu:      { gender: 'female', pitch: 1.0,  rate: 0.92, preferredVoices: ['Samantha', 'Karen', 'Zira'] },
+  harmony:   { gender: 'female', pitch: 1.02, rate: 0.85, preferredVoices: ['Samantha', 'Karen', 'Zira'] },       // warm and concerned — low rate for empathy, soft pitch
+  river:     { gender: 'male',   pitch: 0.78, rate: 0.91, preferredVoices: ['Daniel', 'David', 'James', 'Guy'] }, // male, professional and welcoming — deep pitch
+  hope:      { gender: 'female', pitch: 1.06, rate: 0.82, preferredVoices: ['Moira', 'Fiona', 'Tessa'] },         // hopeful and clear, southern twang — slower drawl, different voice
+  joy:       { gender: 'female', pitch: 1.20, rate: 0.96, preferredVoices: ['Victoria', 'Tessa', 'Susan'] },      // joyful, bright, down to earth — highest pitch, upbeat rate
+  operator:  { gender: 'female', pitch: 1.0,  rate: 0.92, preferredVoices: ['Samantha', 'Karen', 'Zira'] },
+  directory: { gender: 'female', pitch: 1.0,  rate: 0.95, preferredVoices: ['Samantha', 'Karen', 'Zira'] },
 };
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
@@ -33,25 +34,29 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   loadVoices();
 }
 
-function pickVoice(gender: 'female' | 'male'): SpeechSynthesisVoice | null {
+function pickVoice(config: VoiceConfig): SpeechSynthesisVoice | null {
   const voices = loadVoices();
   if (voices.length === 0) return null;
 
   const enVoices = voices.filter(v => v.lang.startsWith('en'));
 
-  if (gender === 'male') {
-    // Prefer known male voice names
+  // First: try agent-specific preferred voices (gives each agent a distinct sound)
+  for (const pat of config.preferredVoices) {
+    const match = enVoices.find(v => v.name.includes(pat));
+    if (match) return match;
+  }
+
+  // Second: fall back to gender-based selection
+  if (config.gender === 'male') {
     const malePatterns = ['David', 'James', 'Daniel', 'Mark', 'Guy', 'Male', 'Aaron', 'Reed'];
     for (const pat of malePatterns) {
       const match = enVoices.find(v => v.name.includes(pat));
       if (match) return match;
     }
-    // Fallback: pick one that doesn't match common female names
     const femalePatterns = ['Samantha', 'Karen', 'Victoria', 'Zira', 'Susan', 'Female', 'Fiona', 'Moira'];
     const nonFemale = enVoices.find(v => !femalePatterns.some(fp => v.name.includes(fp)));
     if (nonFemale) return nonFemale;
   } else {
-    // Prefer known female voice names
     const femalePatterns = ['Samantha', 'Karen', 'Victoria', 'Zira', 'Susan', 'Female', 'Fiona', 'Moira', 'Tessa'];
     for (const pat of femalePatterns) {
       const match = enVoices.find(v => v.name.includes(pat));
@@ -82,7 +87,7 @@ export function speakText(text: string, agent: string = 'menu'): Promise<void> {
     const utterance = new SpeechSynthesisUtterance(phoneticText);
     const config = AGENT_VOICES[agent] || AGENT_VOICES.menu;
 
-    const voice = pickVoice(config.gender);
+    const voice = pickVoice(config);
     if (voice) utterance.voice = voice;
 
     utterance.pitch = config.pitch;
