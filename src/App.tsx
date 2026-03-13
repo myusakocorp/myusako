@@ -102,7 +102,7 @@ export default function App() {
   // Rover State
   const [roverSchedule, setRoverSchedule] = useState<any[]>([]);
   const [roverRoutes, setRoverRoutes] = useState<any[]>([]);
-  const [newRoverTask, setNewRoverTask] = useState({ title: "", start_time: "", end_time: "" });
+  const [newRoverTask, setNewRoverTask] = useState({ date: "", cross_streets: "", time_slot: "" });
   const [newRoute, setNewRoute] = useState({ name: "", waypoints: "" });
   const [generatingRoute, setGeneratingRoute] = useState(false);
   const [generatedRouteResult, setGeneratedRouteResult] = useState<any>(null);
@@ -385,14 +385,30 @@ export default function App() {
 
   const handleScheduleRover = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newRoverTask.date || !newRoverTask.cross_streets || !newRoverTask.time_slot) {
+      alert("Please fill in all fields: date, cross streets, and time slot.");
+      return;
+    }
+    // Map time slot to start/end times
+    const slotMap: Record<string, { start: string; end: string }> = {
+      "10:00 AM": { start: "10:00", end: "11:00" },
+      "11:30 AM": { start: "11:30", end: "12:30" },
+      "2:00 PM": { start: "14:00", end: "15:00" },
+      "3:30 PM": { start: "15:30", end: "16:30" },
+    };
+    const slot = slotMap[newRoverTask.time_slot];
+    if (!slot) return;
+    const title = `Rover Visit — ${newRoverTask.cross_streets} @ ${newRoverTask.time_slot}`;
+    const start_time = `${newRoverTask.date}T${slot.start}`;
+    const end_time = `${newRoverTask.date}T${slot.end}`;
     try {
       const res = await apiFetch("/api/rover/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newRoverTask)
+        body: JSON.stringify({ title, start_time, end_time, cross_streets: newRoverTask.cross_streets, time_slot: newRoverTask.time_slot })
       });
       if (res.ok) {
-        setNewRoverTask({ title: "", start_time: "", end_time: "" });
+        setNewRoverTask({ date: "", cross_streets: "", time_slot: "" });
         fetchRoverData();
       }
     } catch (e) { console.error(e); }
@@ -1344,43 +1360,61 @@ export default function App() {
               <motion.div key="rover" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                   <div className="bg-white p-10 rounded-[48px] shadow-sm border border-black/5 space-y-8">
-                    <h3 className="text-2xl font-light italic">Schedule Rover</h3>
+                    <h3 className="text-2xl font-light italic">Schedule Rover Visit</h3>
                     <form onSubmit={handleScheduleRover} className="space-y-4">
-                      <input 
-                        type="text" 
-                        placeholder="Task Title" 
-                        className="w-full p-4 bg-[#f5f2ed]/50 rounded-2xl border border-black/5"
-                        value={newRoverTask.title}
-                        onChange={e => setNewRoverTask({...newRoverTask, title: e.target.value})}
-                        required
-                      />
-                      <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest opacity-50 mb-2">Date</label>
                         <input 
-                          type="datetime-local" 
-                          className="p-4 bg-[#f5f2ed]/50 rounded-2xl border border-black/5"
-                          value={newRoverTask.start_time}
-                          onChange={e => setNewRoverTask({...newRoverTask, start_time: e.target.value})}
-                          required
-                        />
-                        <input 
-                          type="datetime-local" 
-                          className="p-4 bg-[#f5f2ed]/50 rounded-2xl border border-black/5"
-                          value={newRoverTask.end_time}
-                          onChange={e => setNewRoverTask({...newRoverTask, end_time: e.target.value})}
+                          type="date" 
+                          className="w-full p-4 bg-[#f5f2ed]/50 rounded-2xl border border-black/5"
+                          value={newRoverTask.date}
+                          onChange={e => setNewRoverTask({...newRoverTask, date: e.target.value})}
                           required
                         />
                       </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest opacity-50 mb-2">Cross Streets</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 5th & J Street" 
+                          className="w-full p-4 bg-[#f5f2ed]/50 rounded-2xl border border-black/5"
+                          value={newRoverTask.cross_streets}
+                          onChange={e => setNewRoverTask({...newRoverTask, cross_streets: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-widest opacity-50 mb-2">Time Slot</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {["10:00 AM", "11:30 AM", "2:00 PM", "3:30 PM"].map(slot => (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setNewRoverTask({...newRoverTask, time_slot: slot})}
+                              className={`p-4 rounded-2xl border text-sm font-bold transition-all ${
+                                newRoverTask.time_slot === slot
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20"
+                                  : "bg-[#f5f2ed]/50 border-black/5 hover:border-emerald-300 hover:bg-emerald-50"
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <button type="submit" className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-500 transition-all">
-                        Schedule Task
+                        Schedule Visit
                       </button>
                     </form>
                     <div className="space-y-4">
-                      <h4 className="font-bold text-sm opacity-50">Upcoming Tasks</h4>
+                      <h4 className="font-bold text-sm opacity-50">Scheduled Visits</h4>
                       {roverSchedule.map(task => (
                         <div key={task.id} className="p-4 bg-[#f5f2ed]/30 rounded-2xl border border-black/5 flex justify-between items-center">
                           <div>
-                            <p className="font-bold text-sm">{task.title}</p>
-                            <p className="text-[10px] opacity-50">{new Date(task.start_time).toLocaleString()} - {new Date(task.end_time).toLocaleTimeString()}</p>
+                            <p className="font-bold text-sm">{task.cross_streets || task.title}</p>
+                            <p className="text-[10px] opacity-50">
+                              {task.time_slot ? `${task.time_slot} — ${new Date(task.start_time).toLocaleDateString()}` : `${new Date(task.start_time).toLocaleString()} - ${new Date(task.end_time).toLocaleTimeString()}`}
+                            </p>
                           </div>
                           <span className="text-[10px] uppercase font-bold text-emerald-600">{task.status}</span>
                         </div>
