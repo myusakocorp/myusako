@@ -8,7 +8,7 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      'process.env.DEVIN_API_KEY': JSON.stringify(env.DEVIN_API_KEY),
+      // No client-side env vars needed - API keys are server-side only
     },
     resolve: {
       alias: {

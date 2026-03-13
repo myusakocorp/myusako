@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { addWavHeader } from "./utils/audioUtils";
+import DOMPurify from "dompurify";
 import { io, Socket } from "socket.io-client";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -852,7 +853,7 @@ export default function App() {
                   <div className="bg-white rounded-[40px] shadow-sm border border-black/5 p-8 space-y-6">
                     <h3 className="text-xl font-light italic">System Status</h3>
                     <div className="space-y-4">
-                      <StatusItem label="Devin AI Brain" status="Healthy" />
+                      <StatusItem label="Perplexity AI Brain" status="Healthy" />
                       <StatusItem label="Twilio Telephony" status="Connected" />
                       <StatusItem label="Render Cloud Hosting" status="Active" />
                       <StatusItem label="GitHub Integration" status="Synced" />
@@ -945,7 +946,7 @@ export default function App() {
                           </div>
                           <div>
                             <h3 className="text-sm font-bold tracking-tight">AI Phone Agent</h3>
-                            <p className="text-[10px] uppercase tracking-widest opacity-50">Powered by Devin</p>
+                            <p className="text-[10px] uppercase tracking-widest opacity-50">Powered by Perplexity</p>
                           </div>
                         </div>
                         <button onClick={startSimulation} className="text-[10px] uppercase tracking-widest opacity-50 hover:opacity-100">Reset Agent</button>
@@ -1215,7 +1216,7 @@ export default function App() {
                       <div className="flex-1 overflow-y-auto p-10 bg-white">
                         <div 
                           className="prose prose-sm max-w-none text-sm leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: selectedEmail.html || selectedEmail.text }}
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedEmail.html || selectedEmail.text || '') }}
                         />
                       </div>
                     </div>
@@ -1302,7 +1303,7 @@ export default function App() {
                         {generatingRoute ? (
                           <span className="flex items-center justify-center gap-2">
                             <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                            Devin AI is researching local sources...
+                            AI is researching local Sacramento sources...
                           </span>
                         ) : (
                           "Generate Tomorrow's Daily Route"
@@ -1321,7 +1322,7 @@ export default function App() {
                               </div>
                             </div>
                           ))}
-                          <p className="text-[9px] opacity-40 italic text-center">Route and schedule saved. Powered by Devin AI.</p>
+                          <p className="text-[9px] opacity-40 italic text-center">Route and schedule saved. Powered by Gemini AI.</p>
                         </div>
                       )}
                     </div>
@@ -1526,10 +1527,10 @@ export default function App() {
                       isError={!configStatus.twilio}
                     />
                     <ConfigCard 
-                      title="Devin AI" 
+                      title="Perplexity AI (Phone Agent)" 
                       description="AI brain for phone agent conversational logic." 
-                      status={configStatus.devin ? "Active" : "Inactive"} 
-                      isError={!configStatus.devin}
+                      status={configStatus.perplexity ? "Active" : "Inactive"} 
+                      isError={!configStatus.perplexity}
                     />
                     <ConfigCard 
                       title="Gemini AI (Route Planner)" 

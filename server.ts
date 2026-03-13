@@ -127,25 +127,24 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Request Logging Middleware
-  app.use((req, res, next) => {
-    const hasSession = !!(req.session as any)?.user;
-    const hasHeader = !!req.headers['x-user-id'];
-    console.log(`${req.method} ${req.url} - Session: ${hasSession} - Header: ${hasHeader}`);
-    next();
-  });
-
   app.use(session({
     secret: "usako-secret-key-2026",
     resave: false,
     saveUninitialized: false,
     proxy: true,
     cookie: { 
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
+
+  // Request Logging Middleware (after session middleware so req.session is available)
+  app.use((req, res, next) => {
+    const hasSession = !!(req.session as any)?.user;
+    console.log(`${req.method} ${req.url} - Session: ${hasSession}`);
+    next();
+  });
 
   // --- CORS for public API endpoints (client-facing page on myusako.org) ---
   app.use((req, res, next) => {
@@ -162,9 +161,9 @@ async function startServer() {
   // --- Rover GPS Tracking (in-memory) ---
   let roverPosition: { lat: number; lng: number; updatedAt: string; trackedBy: string } | null = null;
 
-  // --- Devin AI API Helper ---
-  const DEVIN_API_BASE = "https://api.devin.ai";
-  const DEVIN_API_KEY = process.env.DEVIN_API_KEY;
+  // --- Perplexity AI API Helper (phone agent brain) ---
+  const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+  const PERPLEXITY_API_BASE = "https://api.perplexity.ai";
 
   // --- Gemini API Helper (for fast route generation) ---
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -204,10 +203,10 @@ async function startServer() {
     }
   }
 
-  // Track active Devin sessions per user for the phone simulator
-  const activeDevinSessions = new Map<number, string>(); // userId -> sessionId
+  // Track conversation history per user for the phone simulator (Perplexity chat)
+  const activeConversations = new Map<number, { role: string; content: string }[]>();
 
-  const RECEPTIONIST_PROMPT = `You are a warm, professional virtual receptionist for United Solutions Assisting Kinder Ones (USAKO, pronounced Kind-er). You answer phone calls and help callers.
+  const RECEPTIONIST_SYSTEM_PROMPT = `You are a warm, professional virtual receptionist for United Solutions Assisting Kinder Ones (USAKO, pronounced Kind-er). You answer phone calls and help callers.
 
 IMPORTANT RULES:
 - Keep your responses brief and conversational (1-3 sentences max)
@@ -219,92 +218,44 @@ IMPORTANT RULES:
 
 Respond ONLY with plain text as if speaking on the phone. Your first message should be your greeting to the caller.`;
 
-  async function createDevinSession(prompt: string): Promise<{ sessionId: string; url: string } | null> {
-    if (!DEVIN_API_KEY) return null;
+  // --- Perplexity Chat Completion (OpenAI-compatible) ---
+  async function chatWithPerplexity(
+    messages: { role: string; content: string }[],
+    systemPrompt?: string
+  ): Promise<string> {
+    if (!PERPLEXITY_API_KEY) {
+      console.error("PERPLEXITY_API_KEY not set");
+      return "I apologize, the AI system is not configured. Please contact USAKO directly.";
+    }
     try {
-      const res = await fetch(`${DEVIN_API_BASE}/v1/sessions`, {
+      const apiMessages = [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        ...messages
+      ];
+      const res = await fetch(`${PERPLEXITY_API_BASE}/chat/completions`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${DEVIN_API_KEY}`,
+          "Authorization": `Bearer ${PERPLEXITY_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt,
-          max_acu_limit: 1,
-          unlisted: true,
-          title: "USAKO Phone Agent Session"
+          model: "sonar",
+          messages: apiMessages,
+          max_tokens: 300,
+          temperature: 0.7
         })
       });
       if (!res.ok) {
-        console.error("Devin session creation failed:", res.status, await res.text());
-        return null;
+        const errText = await res.text();
+        console.error("Perplexity API error:", res.status, errText);
+        return "I'm having a brief technical issue. Could you please repeat that?";
       }
       const data = await res.json();
-      console.log(`Devin session created: ${data.session_id}`);
-      return { sessionId: data.session_id, url: data.url };
+      return data.choices?.[0]?.message?.content || "I didn't catch that. Could you repeat?";
     } catch (e) {
-      console.error("Devin session creation error:", e);
-      return null;
+      console.error("Perplexity API call error:", e);
+      return "I'm experiencing a connection issue. Please hold or try again.";
     }
-  }
-
-  async function sendDevinMessage(sessionId: string, message: string): Promise<boolean> {
-    if (!DEVIN_API_KEY) return false;
-    try {
-      const res = await fetch(`${DEVIN_API_BASE}/v1/sessions/${sessionId}/message`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DEVIN_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ message })
-      });
-      if (!res.ok) {
-        console.error("Devin send message failed:", res.status, await res.text());
-        return false;
-      }
-      return true;
-    } catch (e) {
-      console.error("Devin send message error:", e);
-      return false;
-    }
-  }
-
-  async function getDevinSessionMessages(sessionId: string): Promise<any[]> {
-    if (!DEVIN_API_KEY) return [];
-    try {
-      const res = await fetch(`${DEVIN_API_BASE}/v1/sessions/${sessionId}`, {
-        headers: {
-          "Authorization": `Bearer ${DEVIN_API_KEY}`
-        }
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.messages || [];
-    } catch (e) {
-      console.error("Devin get messages error:", e);
-      return [];
-    }
-  }
-
-  async function pollDevinResponse(sessionId: string, knownMessageCount: number, timeoutMs: number = 60000): Promise<string> {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeoutMs) {
-      const messages = await getDevinSessionMessages(sessionId);
-      // Look for new messages beyond what we knew about
-      if (messages.length > knownMessageCount) {
-        // Get the latest message from Devin (not from user)
-        for (let i = messages.length - 1; i >= knownMessageCount; i--) {
-          const msg = messages[i];
-          if (msg.role !== "user" && msg.message) {
-            return msg.message;
-          }
-        }
-      }
-      // Wait before polling again
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    }
-    return "I apologize, I'm having trouble processing your request right now. Please try again or call back later.";
   }
 
   // --- Real-time Messaging (Socket.io) ---
@@ -331,22 +282,10 @@ Respond ONLY with plain text as if speaking on the phone. Your first message sho
     });
   });
 
-  // --- Auth Middleware with Header Fallback ---
+  // --- Auth Middleware (session-based only) ---
   const getAuthUser = (req: express.Request) => {
     const sessionUser = (req.session as any).user;
-    if (sessionUser) return sessionUser;
-
-    const userId = req.headers['x-user-id'];
-    if (userId) {
-      // Fallback for iframe cookie blocking: fetch user from DB by ID
-      try {
-        const user = db.prepare("SELECT id, username, role, full_name FROM users WHERE id = ?").get(userId) as any;
-        return user;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
+    return sessionUser || null;
   };
 
   // --- Public Client Page (served at /visit) ---
@@ -983,47 +922,41 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     res.type("text/xml").send(twiml.toString());
   });
 
-  // --- Existing Twilio/Gemini Logic ---
-  // Track message counts per session for polling
-  const sessionMessageCounts = new Map<string, number>();
-
+  // --- Phone Simulator Chat (Perplexity AI) ---
   app.post("/api/chat", async (req, res) => {
     const { message, lane } = req.body;
     const currentUser = getAuthUser(req);
     const userId = currentUser?.id || 0;
 
     try {
-      let sessionId = activeDevinSessions.get(userId);
       let responseText: string;
 
-      if (message === "START_CALL" || !sessionId) {
-        // Create a new Devin session for this call
-        const session = await createDevinSession(RECEPTIONIST_PROMPT);
-        if (!session) {
-          return res.status(500).json({ error: "Failed to create Devin session. Check DEVIN_API_KEY." });
-        }
-        sessionId = session.sessionId;
-        activeDevinSessions.set(userId, sessionId);
-        sessionMessageCounts.set(sessionId, 0);
-
-        // Poll for Devin's initial greeting response
-        responseText = await pollDevinResponse(sessionId, 0, 90000);
-        // Update known message count
-        const msgs = await getDevinSessionMessages(sessionId);
-        sessionMessageCounts.set(sessionId, msgs.length);
+      if (message === "START_CALL") {
+        // Start a new conversation — clear history and get greeting
+        activeConversations.set(userId, []);
+        responseText = await chatWithPerplexity(
+          [{ role: "user", content: "A caller just dialed in. Please greet them warmly." }],
+          RECEPTIONIST_SYSTEM_PROMPT
+        );
+        // Store the exchange in conversation history
+        activeConversations.set(userId, [
+          { role: "user", content: "A caller just dialed in. Please greet them warmly." },
+          { role: "assistant", content: responseText }
+        ]);
       } else {
-        // Send message to existing session
-        const knownCount = sessionMessageCounts.get(sessionId) || 0;
-        const sent = await sendDevinMessage(sessionId, message);
-        if (!sent) {
-          return res.status(500).json({ error: "Failed to send message to Devin session." });
-        }
+        // Continue existing conversation
+        const history = activeConversations.get(userId) || [];
+        history.push({ role: "user", content: message });
 
-        // Poll for Devin's response
-        responseText = await pollDevinResponse(sessionId, knownCount, 60000);
-        // Update known message count
-        const msgs = await getDevinSessionMessages(sessionId);
-        sessionMessageCounts.set(sessionId, msgs.length);
+        responseText = await chatWithPerplexity(history, RECEPTIONIST_SYSTEM_PROMPT);
+
+        history.push({ role: "assistant", content: responseText });
+        activeConversations.set(userId, history);
+
+        // Keep conversation history manageable (last 20 messages)
+        if (history.length > 20) {
+          activeConversations.set(userId, history.slice(-20));
+        }
       }
 
       // Check for lead data in response
@@ -1038,7 +971,6 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
       }
 
       const cleanText = responseText.replace(/\[LEAD: .*?\]/g, "").trim();
-      // No TTS audio with Devin — text-only response
       res.json({ text: cleanText, audio: null, lane });
     } catch (error) {
       console.error("Chat error:", error);
@@ -1046,9 +978,9 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     }
   });
 
-  // Track Twilio voice call sessions
-  const twilioCallSessions = new Map<string, string>(); // CallSid -> devinSessionId
-  const twilioSessionMsgCounts = new Map<string, number>();
+  // --- Twilio Voice Handler (Perplexity AI) ---
+  // Track conversation history per Twilio call
+  const twilioCallConversations = new Map<string, { role: string; content: string }[]>();
 
   app.post("/api/twilio/voice", async (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
@@ -1061,30 +993,23 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     } else {
       const input = Digits || SpeechResult;
       try {
-        let sessionId = twilioCallSessions.get(CallSid);
-        if (!sessionId) {
-          // Create a new Devin session for this Twilio call
-          const session = await createDevinSession(
-            `You are a warm receptionist for USAKO (United Solutions Assisting Kinder Ones, pronounced Kind-er). ` +
-            `You are handling a live phone call. Keep responses brief (1-2 sentences). ` +
-            `Do NOT use markdown or attempt coding tasks. Just speak naturally as a phone receptionist. ` +
-            `The caller just said: ${input}`
-          );
-          if (session) {
-            sessionId = session.sessionId;
-            twilioCallSessions.set(CallSid, sessionId);
-            twilioSessionMsgCounts.set(sessionId, 0);
-          }
-        } else {
-          await sendDevinMessage(sessionId, `The caller said: ${input}`);
-        }
+        // Get or create conversation history for this call
+        let history = twilioCallConversations.get(CallSid) || [];
+        history.push({ role: "user", content: `The caller said: ${input}` });
 
-        let text = "I didn't catch that. Could you repeat?";
-        if (sessionId) {
-          const knownCount = twilioSessionMsgCounts.get(sessionId) || 0;
-          text = await pollDevinResponse(sessionId, knownCount, 30000);
-          const msgs = await getDevinSessionMessages(sessionId);
-          twilioSessionMsgCounts.set(sessionId, msgs.length);
+        const text = await chatWithPerplexity(
+          history,
+          `You are a warm receptionist for USAKO (United Solutions Assisting Kinder Ones, pronounced Kind-er). ` +
+          `You are handling a live phone call. Keep responses brief (1-2 sentences). ` +
+          `Do NOT use markdown or attempt coding tasks. Just speak naturally as a phone receptionist.`
+        );
+
+        history.push({ role: "assistant", content: text });
+        twilioCallConversations.set(CallSid, history);
+
+        // Keep history manageable
+        if (history.length > 16) {
+          twilioCallConversations.set(CallSid, history.slice(-16));
         }
 
         const gather = twiml.gather({ input: ["speech", "dtmf"], action: "/api/twilio/voice" });
@@ -1135,7 +1060,7 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     res.json({
       email: hasEmail,
       twilio: twilioConfigured,
-      devin: !!process.env.DEVIN_API_KEY,
+      perplexity: !!process.env.PERPLEXITY_API_KEY,
       gemini: !!process.env.GEMINI_API_KEY
     });
   });
