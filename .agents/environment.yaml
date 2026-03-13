@@ -1,0 +1,14 @@
+# USAKO Intranet - Environment Configuration
+
+setup:
+  - npm install
+  - npm run build
+
+maintenance:
+  - npm install
+
+build:
+  - npm run build
+
+dev:
+  - npx tsx server.ts

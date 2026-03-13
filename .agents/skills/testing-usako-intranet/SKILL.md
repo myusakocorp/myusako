@@ -1,71 +1,76 @@
 # Testing USAKO Intranet App
 
+## Overview
+The USAKO Intranet is a React + Express app deployed on a Namecheap VPS. The public-facing site (myusako.org) is on Namecheap shared hosting.
+
 ## Devin Secrets Needed
-- `PERPLEXITY_API_KEY` — Required for the AI phone agent brain (Perplexity Sonar API)
-- VPS SSH credentials (root@159.198.41.10) — For production deployment testing
+- `PERPLEXITY_API_KEY` — Perplexity Sonar API key for the AI phone agent brain
+- VPS SSH credentials (root@159.198.41.10, port 22) — for deployment
+- cPanel credentials (myusxbab) — for updating files on myusako.org shared hosting
+- Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, TWILIO_API_KEY, TWILIO_API_SECRET, TWILIO_TWIML_APP_SID) — for phone/softphone features
 
-## Local Dev Setup
-1. Navigate to `/home/ubuntu/repos/myusako`
-2. Ensure `.env` file exists with `PERPLEXITY_API_KEY`
-3. Kill any existing processes on port 3000: `fuser -k 3000/tcp`
-4. Start server: `npx tsx server.ts` (runs on http://localhost:3000)
-5. The app serves both the API and the built frontend from the same Express server
+## Architecture
+- **Intranet App (VPS)**: https://server1.myusako.org — React frontend + Express backend, managed by PM2
+  - App location: `/opt/usako-intranet`
+  - Process manager: PM2 (`pm2 restart all`, `pm2 status`, `pm2 logs`)
+  - Reverse proxy: Nginx
+  - SSL: Let's Encrypt (certbot)
+- **Public Site (Shared Hosting)**: https://myusako.org — Static HTML on Namecheap shared hosting
+  - cPanel access: `https://myusako.org:2083`
+  - File location: `/public_html/`
+  - Key files: `index.html` (main site), `event-grid.html` (rover visit request page)
 
-## Important: Local Database vs Production
-- The local SQLite database (`usako_intranet.db`) is separate from the VPS production database
-- If the staff password was changed in production but not locally, you need to update it manually:
-  ```
-  node -e "const Database = require('better-sqlite3'); const db = new Database('usako_intranet.db'); db.prepare('UPDATE users SET password = ? WHERE username = ?').run('NEW_PASSWORD', 'staff'); console.log('Updated');"
-  ```
-- The default seed only runs when no users exist, so password changes in code won't auto-apply to existing DBs
+## Testing the Intranet
 
-## Login
-- URL: http://localhost:3000 (local) or https://server1.myusako.org (production)
-- Username: `staff`
-- Password: stored as plaintext in the `users` table (by user's design choice)
-- After login, you land on the Dashboard tab
+### Login
+- URL: https://server1.myusako.org
+- Credentials: `staff` / password stored in secrets
+- After login, you land on the Dashboard
 
-## Testing the IVR Simulator
-1. Click **"AI Phone System"** in the left sidebar
-2. The **"AI Agent Simulator"** sub-tab is active by default
-3. Click **"Start Call"** button — this sends `START_CALL` to `POST /api/chat`
-4. The greeting should include: "United Solutions Assisting Kind-er Ones" and menu options 1-5, 0
-5. To test specific agents, type the number in the input field and send:
-   - `1` → Directory
-   - `2` → Harmony (Client Services / Relief Rover)
-   - `3` → River (Donations)
-   - `4` → Hope (Operations)
-   - `5` → Joy (General Info)
-   - `0` → Operator
-6. Each agent should introduce themselves by name and reference their specialty
-7. Use **"RESET"** button (top right of simulator) to start a fresh call between agent tests
-8. TTS auto-plays via browser SpeechSynthesis — voice profiles differ per agent (pitch, rate, preferred voices)
+### Rover Schedule Form
+- Navigate: Sidebar → "Rover" tab
+- The form has 3 fields: Date picker, Cross Streets text input, Time Slot buttons (10:00 AM, 11:30 AM, 2:00 PM, 3:30 PM)
+- Submit via "Schedule Visit" button
+- Verify: New entry appears in "Scheduled Visits" list below with cross streets, time slot, and SCHEDULED status
+- Backend: POST /api/rover/schedule stores title, start_time, end_time, cross_streets, time_slot
 
-## Testing 211.org Community Resources
-1. Start a call and press `2` to reach Harmony
-2. Ask about community resources: "I need help finding food assistance"
-3. When asked for location, say "Sacramento"
-4. Harmony should reference 211 services and offer verbal or SMS delivery of info
+### Event-Grid Page (Public)
+- URL: https://myusako.org/event-grid.html
+- This page has `API_BASE` variable pointing to `https://server1.myusako.org`
+- If you see "unable to connect to server", check that API_BASE is set correctly and VPS CORS allows the origin
+- The form submits to `/api/rover/visit-request` on the VPS
+- The map uses Leaflet/OpenStreetMap centered on Sacramento
 
-## Testing the Mission Page
-- Click **"Our Mission"** in the sidebar
-- Should show organization name, U·S·A·K·O acronym, mission statement, hours, location, and Relief Rover R.E.A. section
+### IVR Simulator
+- Navigate: Sidebar → "AI Phone System" → IVR Simulator tab
+- Click "Start Call" to begin
+- Menu options 1-5, 0 route to different agents (Harmony, River, Hope, Joy, Operator)
+- Each agent has distinct voice profile via browser SpeechSynthesis
 
-## Key Verification Points
-- Header shows agent name when routed (e.g., "AGENT HARMONY · BROWSER TTS")
-- Each agent message has a "REPLAY VOICE" button for re-playing TTS
-- Dashboard shows "Perplexity AI Brain: HEALTHY" in System Status
-- Company name is spoken as "Kind-er" (phonetic) and "U S A K O" (spelled out) in TTS
+## Deployment to VPS
 
-## Production Deployment
-- VPS: 159.198.41.10 (server1.myusako.org)
-- App location on VPS: `/opt/usako-intranet`
-- Process manager: PM2 (`pm2 restart all` after deploy)
-- Use `sshpass` for non-interactive SSH: `sshpass -p 'PASSWORD' ssh root@159.198.41.10`
-- After pulling changes: `npm run build && pm2 restart all`
+Use non-interactive SSH:
+```bash
+sshpass -p 'PASSWORD' ssh -o StrictHostKeyChecking=no root@159.198.41.10 "cd /opt/usako-intranet && git fetch origin && git merge origin/BRANCH --no-edit && npm run build && pm2 restart all"
+```
+
+Do NOT use interactive SSH sessions for file editing.
+
+## Updating Files on Shared Hosting (myusako.org)
+
+Use cPanel UAPI with basic auth:
+
+### Read a file:
+```bash
+curl -sk -u "CPANEL_USER:CPANEL_PASS" "https://myusako.org:2083/execute/Fileman/get_file_content?dir=%2Fpublic_html&file=FILENAME"
+```
+
+### Write a file:
+Use Python with urllib to POST to `/execute/Fileman/save_file_content` with basic auth.
+The response will have `status: 1` on success.
 
 ## Common Issues
-- Port 3000 already in use: Kill with `fuser -k 3000/tcp` (note: `lsof` may not be available)
-- Local DB password mismatch: Update manually with better-sqlite3 as shown above
-- TTS not playing: Browser may require user interaction first — click "TEST AUDIO" button
-- Server exits silently: Check for port conflicts or missing env vars
+- **event-grid.html "unable to connect"**: Check that `API_BASE` in the file points to `https://server1.myusako.org`, not empty string
+- **Softphone "credentials missing"**: Ensure TWILIO_API_KEY, TWILIO_API_SECRET, and TWILIO_TWIML_APP_SID are set in `/opt/usako-intranet/.env` on the VPS
+- **PM2 not starting after deploy**: Check `pm2 logs` for errors. Common cause is missing .env variables.
+- **404 on VPS**: Ensure `npm run build` was run after code changes (builds to `dist/` folder served by Express)
