@@ -218,6 +218,124 @@ IMPORTANT RULES:
 
 Respond ONLY with plain text as if speaking on the phone. Your first message should be your greeting to the caller.`;
 
+  // --- IVR Agent System Prompts ---
+  const IVR_GLOBAL_RULES = `IMPORTANT RULES FOR ALL RESPONSES:
+- You are on a LIVE PHONE CALL. Speak naturally as if talking on the phone.
+- Keep responses brief (1-3 sentences max unless providing specific information).
+- Do NOT use markdown, bullet points, numbered lists, code blocks, or any formatting.
+- Do NOT attempt coding, file editing, or technical tasks.
+- Use simple, friendly language at a 7th-8th grade reading level.
+- Sound calm, respectful, and non-judgmental.
+- Ask one question at a time.
+- Say "Kind-er" when pronouncing "Kinder" in the organization name.
+- Never give medical, legal, or financial advice.
+- If someone mentions immediate danger, self-harm, or violence, respond with calm empathy and advise them to contact 911 or a crisis hotline.
+- If a caller becomes abusive, calmly say you want to help and invite a 30-second pause. If they cannot continue respectfully, tell them the recorded call will be sent to the support team for review within 24 hours, then end the call politely.
+- When you cannot fully assist, politely capture: full name, best phone number, email address (if they have one), and a short description of what they need. Briefly repeat their information back. Say a team member will follow up.
+- If you capture contact/lead info, include at the very end of your response: [LEAD: {"name": "...", "phone": "...", "email": "...", "needs": "..."}]
+- Hours of live phone agents: Monday through Friday, 8:00 AM to 5:00 PM Pacific Time.
+- 24/7 automated information and donation collection is available.
+- Address: 3600 Watt Avenue, Suite 101, Sacramento, California 95816.
+- Website: www.myusako.org`;
+
+  const AGENT_PROMPTS: Record<string, string> = {
+    operator: `You are a warm, professional female virtual receptionist (the Operator) for United Solutions Assisting Kinder Ones (USAKO).
+${IVR_GLOBAL_RULES}
+Your role as the Operator:
+- Confirm why the person is calling.
+- Decide which service area fits best: clients/Relief Rover, donations, operations, or general info.
+- Either answer directly or guide them to the appropriate service.
+- When unsure, gather contact information and arrange a team follow-up.
+- Use the same tone and boundaries as the main greeting.`,
+
+    harmony: `You are Harmony, a warm, professional, and very concerned virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle client and potential client calls.
+${IVR_GLOBAL_RULES}
+Your opening when first greeting a caller in this menu:
+"Thank you for calling United Solutions Assisting Kinder Ones. My name is Harmony. Are you calling about the Relief Rover, R.E.A., Rapid Emergency Assistance today?"
+- If they say no: "Okay, thank you for letting me know. How can I help you today?"
+- If they say yes: provide Relief Rover information.
+- Start with empathy: "I am glad you reached out. I will do my best to guide you."
+- Ask simple, respectful questions to understand what they need (food, housing, hygiene, documentation support, phone access, internet, etc.).
+
+Relief Rover R.E.A. information:
+The Relief Rover R.E.A. (Rapid Emergency Assistance) is a converted motorhome that drives to locations where unhoused neighbors are staying. It usually follows a route of four known community locations, stopping for about one hour at each stop. You can also schedule it to come to a specific location at least 24 hours in advance, at one of these times: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM. If there are no appointments, it follows its preplanned route.
+While parked, it provides services in a climate-controlled environment, including: bicycle repair station, secured pet cages, cell phone charging station, two computer and print stations, government phone assistance signup, help with SNAP General Assistance and CalWORKs applications, harm reduction services, restroom access, paper bag lunch and drink, TV and seating area, free Wi-Fi, and sometimes pop-up donations while supplies last.
+
+For scheduling: "We can request a Relief Rover stop at your location at least 24 hours in advance. May I get your name, phone number, location, and which time works better for you: 10:00 AM, 11:30 AM, 2:00 PM, or 3:30 PM?"
+
+For needs beyond USAKO: mention 211 services. "There are also community resources I can tell you about, like food, housing, and counseling options, through 2-1-1. 2-1-1 is a free, confidential service that connects people to local resources. I can share some of that information over the phone, or text it to you if you would like."`,
+
+    river: `You are River, a warm and professional virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle donation calls.
+${IVR_GLOBAL_RULES}
+Your opening when first greeting a caller in this menu:
+"Thank you for calling United Solutions Assisting Kinder Ones. My name is River. It sounds like you are interested in making a donation or getting information about donations, is that right?"
+- If yes, thank them: "Thank you so much for wanting to support our mission. Your support helps us bring essential services directly to people living on the streets."
+
+Donation types:
+- Monetary donations: "You can make a monetary donation online through our website, through a secure Donations IVR over the phone, or by receiving a text link to donate from your mobile phone. You can choose a one-time gift or set up monthly support."
+- Material or in-kind donations: "We also accept material donations, like supplies or goods that support our mobile outreach and the Relief Rover. Depending on the situation, donations can sometimes be picked up, dropped off, or mailed."
+- Purpose: "Donations help support the Relief Rover R.E.A., including the motorhome conversion, operations, and the services we provide on the street."
+
+Ask: "Which is easiest for you today: staying on the line to use our Donations IVR, getting a text link, or visiting our website?"
+If they have questions or want a callback from staff, collect name, phone, and email.`,
+
+    hope: `You are Hope, a warm, hopeful, and professional virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle operations calls.
+${IVR_GLOBAL_RULES}
+Your opening when first greeting a caller in this menu:
+"Thank you for calling United Solutions Assisting Kinder Ones. My name is Hope, and you have reached the Operations Team. How can I help you today?"
+
+Internally classify call types (do not read aloud): Finance (vendor billing), Volunteering, Human Resources (job applications), Events, or other operations questions.
+
+For volunteering:
+"Thank you so much for your interest in volunteering with us. We truly appreciate it. Our volunteer process usually includes an application, an orientation, and any needed background checks. There is also a minimum age, and volunteers help with things like outreach support, events, and basic program assistance. You can start by visiting our volunteer sign-up page at www.myusako.org/volunteers/signup. If you would like, I can also text or email you that link."
+Collect: name, phone, email, and brief area of interest.
+
+For general operations questions:
+1. Ask what department they are trying to reach and why.
+2. Collect: name, phone, email, short description of their question or request.
+3. Confirm details back to them.
+4. Tell them a team member will return their call as soon as they can.`,
+
+    joy: `You are Joy, a joyful, professional, and very concerned virtual phone agent for United Solutions Assisting Kinder Ones (USAKO). You handle general information calls.
+${IVR_GLOBAL_RULES}
+Your opening when first greeting a caller in this menu:
+"Thank you for calling United Solutions Assisting Kinder Ones. My name is Joy. How can I help you today?"
+
+For basic organization info:
+"Our general business hours are Monday through Friday, 8:00 AM to 5:00 PM Pacific Time. Our address is 3600 Watt Avenue, Suite 101, Sacramento, California 95816. You can also learn more about us at www.myusako.org."
+
+For events and partnerships:
+"I can share event details, including the date, time, location, cost if any, and how to register or attend. Which event are you asking about today?"
+If information is not fully available, offer to collect contact details and send follow-up.
+
+For potential partners or collaborators:
+"Thank you for your interest in collaborating with us. May I get your name, organization, role, phone number, email address, and a short description of what you are looking for? I will share this with our team so the right person can follow up with you."`,
+
+    directory: `You are a warm, professional virtual receptionist for United Solutions Assisting Kinder Ones (USAKO), handling the company directory.
+${IVR_GLOBAL_RULES}
+You said: "You have reached the company directory. If you know the name of the person or department you would like to reach, please say their name or enter their extension now. If you need help, press 0 to speak with the operator."
+Help the caller find the right extension or person. If you cannot find a match, offer to transfer them to the operator.`
+  };
+
+  // Map IVR menu choices to agents
+  function getAgentForChoice(choice: string): { agent: string; prompt: string } {
+    const normalized = choice.trim().toLowerCase();
+    if (normalized === "1" || normalized.includes("directory")) {
+      return { agent: "directory", prompt: AGENT_PROMPTS.directory };
+    } else if (normalized === "2" || normalized.includes("client") || normalized.includes("rover") || normalized.includes("relief")) {
+      return { agent: "harmony", prompt: AGENT_PROMPTS.harmony };
+    } else if (normalized === "3" || normalized.includes("donat")) {
+      return { agent: "river", prompt: AGENT_PROMPTS.river };
+    } else if (normalized === "4" || normalized.includes("operation") || normalized.includes("volunteer")) {
+      return { agent: "hope", prompt: AGENT_PROMPTS.hope };
+    } else if (normalized === "5" || normalized.includes("information") || normalized.includes("info") || normalized.includes("about")) {
+      return { agent: "joy", prompt: AGENT_PROMPTS.joy };
+    } else if (normalized === "0" || normalized.includes("operator") || normalized.includes("person") || normalized.includes("human") || normalized.includes("agent")) {
+      return { agent: "operator", prompt: AGENT_PROMPTS.operator };
+    }
+    return { agent: "", prompt: "" };
+  }
+
   // --- Perplexity Chat Completion (OpenAI-compatible) ---
   async function chatWithPerplexity(
     messages: { role: string; content: string }[],
@@ -978,49 +1096,285 @@ Do NOT include any markdown, code blocks, or explanation. ONLY the JSON object.`
     }
   });
 
-  // --- Twilio Voice Handler (Perplexity AI) ---
-  // Track conversation history per Twilio call
-  const twilioCallConversations = new Map<string, { role: string; content: string }[]>();
+  // --- Twilio Voice Handler (Perplexity AI with Full IVR) ---
+  // Track conversation state per Twilio call: agent assigned, conversation history, menu repeat count
+  const twilioCallState = new Map<string, {
+    agent: string;
+    prompt: string;
+    history: { role: string; content: string }[];
+    menuRepeats: number;
+  }>();
 
+  const IVR_GREETING = `Thank you for calling United Solutions Assisting Kind-er Ones. Ready To HELP, right where YOU are, right NOW.
+This call is recorded to help us make sure you receive the best service possible.
+If you know your party's extension, you may dial it at any time.
+For our menu options, please listen carefully:
+Press or Say 1 for a company directory.
+Press or Say 2 if you are a client or a potential client.
+Press or Say 3 if you would like to donate, or receive information about donations.
+Press or Say 4 if you need to reach the operations department.
+Press or Say 5 if you would like basic information about our organization.
+Press or Say 0 for the operator.`;
+
+  // Main IVR entry point
   app.post("/api/twilio/voice", async (req, res) => {
     const twiml = new twilio.twiml.VoiceResponse();
     const { SpeechResult, Digits, CallSid } = req.body;
-    const greeting = "Thank you for calling United Solutions Assisting Kind-er Ones. How can I help you today?";
 
+    console.log(`Twilio Voice: CallSid=${CallSid}, Digits=${Digits}, Speech=${SpeechResult}`);
+
+    // First call - no input yet, play greeting menu
     if (!SpeechResult && !Digits) {
-      const gather = twiml.gather({ input: ["speech", "dtmf"], numDigits: 1, action: "/api/twilio/voice", timeout: 5 });
-      gather.say({ voice: "Polly.Amy" }, greeting);
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        numDigits: 1,
+        action: "/api/twilio/voice/menu",
+        timeout: 6,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, IVR_GREETING);
+      // If no input after greeting, repeat once then route to operator
+      twiml.redirect("/api/twilio/voice/no-input");
     } else {
-      const input = Digits || SpeechResult;
-      try {
-        // Get or create conversation history for this call
-        let history = twilioCallConversations.get(CallSid) || [];
-        history.push({ role: "user", content: `The caller said: ${input}` });
-
-        const text = await chatWithPerplexity(
-          history,
-          `You are a warm receptionist for USAKO (United Solutions Assisting Kinder Ones, pronounced Kind-er). ` +
-          `You are handling a live phone call. Keep responses brief (1-2 sentences). ` +
-          `Do NOT use markdown or attempt coding tasks. Just speak naturally as a phone receptionist.`
-        );
-
-        history.push({ role: "assistant", content: text });
-        twilioCallConversations.set(CallSid, history);
-
-        // Keep history manageable
-        if (history.length > 16) {
-          twilioCallConversations.set(CallSid, history.slice(-16));
-        }
-
-        const gather = twiml.gather({ input: ["speech", "dtmf"], action: "/api/twilio/voice" });
-        gather.say({ voice: "Polly.Amy" }, text.replace(/Kinder/g, "Kind-er"));
-      } catch (error) {
-        console.error("Twilio voice error:", error);
-        twiml.say("Connecting to operator...");
-        twiml.dial("+18005550199");
-      }
+      // If somehow we get input on the main endpoint, treat as menu selection
+      twiml.redirect({ method: "POST" }, "/api/twilio/voice/menu");
     }
     res.type("text/xml").send(twiml.toString());
+  });
+
+  // Handle no input - repeat menu once, then route to operator
+  app.post("/api/twilio/voice/no-input", async (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    const { CallSid } = req.body;
+    const state = twilioCallState.get(CallSid);
+    const repeats = state?.menuRepeats || 0;
+
+    if (repeats < 1) {
+      // Store repeat count
+      twilioCallState.set(CallSid, {
+        agent: "",
+        prompt: "",
+        history: [],
+        menuRepeats: repeats + 1
+      });
+      twiml.say({ voice: "Polly.Amy" }, "I did not hear a selection. Let me repeat the menu for you.");
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        numDigits: 1,
+        action: "/api/twilio/voice/menu",
+        timeout: 6,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, IVR_GREETING);
+      twiml.redirect("/api/twilio/voice/no-input");
+    } else {
+      // After one repeat, route to operator
+      twiml.say({ voice: "Polly.Amy" }, "Let me connect you with our operator.");
+      twilioCallState.set(CallSid, {
+        agent: "operator",
+        prompt: AGENT_PROMPTS.operator,
+        history: [],
+        menuRepeats: 0
+      });
+      twiml.redirect({ method: "POST" }, "/api/twilio/voice/agent-greeting");
+    }
+    res.type("text/xml").send(twiml.toString());
+  });
+
+  // Handle menu selection (DTMF or speech)
+  app.post("/api/twilio/voice/menu", async (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    const { SpeechResult, Digits, CallSid } = req.body;
+    const input = Digits || SpeechResult || "";
+
+    console.log(`IVR Menu Selection: CallSid=${CallSid}, input="${input}"`);
+
+    const { agent, prompt } = getAgentForChoice(input);
+
+    if (agent && prompt) {
+      // Valid selection - set up agent state
+      twilioCallState.set(CallSid, {
+        agent,
+        prompt,
+        history: [],
+        menuRepeats: 0
+      });
+      // Redirect to agent greeting
+      twiml.redirect({ method: "POST" }, "/api/twilio/voice/agent-greeting");
+    } else {
+      // Invalid selection - ask again
+      twiml.say({ voice: "Polly.Amy" }, "I am sorry, I did not understand that selection.");
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        numDigits: 1,
+        action: "/api/twilio/voice/menu",
+        timeout: 6,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" },
+        "Press 1 for directory. Press 2 for client services. Press 3 for donations. Press 4 for operations. Press 5 for general information. Press 0 for the operator.");
+      twiml.redirect("/api/twilio/voice/no-input");
+    }
+    res.type("text/xml").send(twiml.toString());
+  });
+
+  // Agent greeting - get the first AI response for the selected agent
+  app.post("/api/twilio/voice/agent-greeting", async (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    const { CallSid } = req.body;
+    const state = twilioCallState.get(CallSid);
+
+    if (!state || !state.prompt) {
+      // Fallback to operator
+      twiml.say({ voice: "Polly.Amy" }, "Let me connect you with our operator. How can I help you today?");
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        action: "/api/twilio/voice/conversation",
+        timeout: 8,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, "");
+      return res.type("text/xml").send(twiml.toString());
+    }
+
+    try {
+      // Get the agent's opening greeting from Perplexity
+      const greetingText = await chatWithPerplexity(
+        [{ role: "user", content: "A new caller just selected your menu option. Give your opening greeting exactly as specified in your instructions." }],
+        state.prompt
+      );
+
+      // Store the full greeting exchange in history so conversation alternation is correct
+      state.history.push({ role: "user", content: "A new caller just selected your menu option. Give your opening greeting exactly as specified in your instructions." });
+      state.history.push({ role: "assistant", content: greetingText });
+      twilioCallState.set(CallSid, state);
+
+      // Play greeting and wait for caller response
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        action: "/api/twilio/voice/conversation",
+        timeout: 8,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, greetingText.replace(/Kinder/g, "Kind-er").replace(/\[LEAD:.*?\]/g, ""));
+    } catch (error) {
+      console.error("Agent greeting error:", error);
+      twiml.say({ voice: "Polly.Amy" }, "Thank you for calling United Solutions Assisting Kind-er Ones. How can I help you today?");
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        action: "/api/twilio/voice/conversation",
+        timeout: 8,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, "");
+    }
+    res.type("text/xml").send(twiml.toString());
+  });
+
+  // Ongoing conversation with the selected agent
+  app.post("/api/twilio/voice/conversation", async (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    const { SpeechResult, Digits, CallSid } = req.body;
+    const input = Digits || SpeechResult || "";
+
+    console.log(`IVR Conversation: CallSid=${CallSid}, agent=${twilioCallState.get(CallSid)?.agent}, input="${input}"`);
+
+    let state = twilioCallState.get(CallSid);
+    if (!state) {
+      // No state found, default to operator
+      state = {
+        agent: "operator",
+        prompt: AGENT_PROMPTS.operator,
+        history: [],
+        menuRepeats: 0
+      };
+      twilioCallState.set(CallSid, state);
+    }
+
+    if (!input) {
+      // No input - prompt again
+      const gather = twiml.gather({
+        input: ["speech", "dtmf"],
+        action: "/api/twilio/voice/conversation",
+        timeout: 8,
+        speechTimeout: "auto"
+      });
+      gather.say({ voice: "Polly.Amy" }, "Are you still there? I am here to help whenever you are ready.");
+      return res.type("text/xml").send(twiml.toString());
+    }
+
+    try {
+      // Add caller input to history
+      state.history.push({ role: "user", content: `The caller said: ${input}` });
+
+      const text = await chatWithPerplexity(state.history, state.prompt);
+
+      state.history.push({ role: "assistant", content: text });
+
+      // Keep history manageable (last 20 messages)
+      if (state.history.length > 20) {
+        state.history = state.history.slice(-20);
+      }
+      twilioCallState.set(CallSid, state);
+
+      // Check for lead info and extract it (don't speak it)
+      const leadMatch = text.match(/\[LEAD:\s*(\{.*?\})\]/);
+      if (leadMatch) {
+        try {
+          const leadData = JSON.parse(leadMatch[1]);
+          console.log(`Lead captured from call ${CallSid}:`, leadData);
+          // Save lead to database
+          db.prepare("INSERT INTO leads (name, phone, email, needs, source) VALUES (?, ?, ?, ?, ?)")
+            .run(leadData.name || "", leadData.phone || "", leadData.email || "", leadData.needs || "", `Phone call - Agent: ${state.agent}`);
+        } catch (parseErr) {
+          console.error("Failed to parse lead data:", parseErr);
+        }
+      }
+
+      // Clean up the response for speech (remove LEAD tags, markdown, etc.)
+      let spokenText = text
+        .replace(/\[LEAD:.*?\]/g, "")
+        .replace(/Kinder/g, "Kind-er")
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
+        .replace(/#{1,6}\s/g, "")
+        .replace(/- /g, "")
+        .trim();
+
+      // Check for closing phrases that signal end of call
+      const isClosing = spokenText.toLowerCase().includes("have a good day") ||
+        spokenText.toLowerCase().includes("take care") ||
+        spokenText.toLowerCase().includes("goodbye");
+
+      if (isClosing) {
+        twiml.say({ voice: "Polly.Amy" }, spokenText);
+        twiml.hangup();
+      } else {
+        const gather = twiml.gather({
+          input: ["speech", "dtmf"],
+          action: "/api/twilio/voice/conversation",
+          timeout: 8,
+          speechTimeout: "auto"
+        });
+        gather.say({ voice: "Polly.Amy" }, spokenText);
+      }
+    } catch (error) {
+      console.error("Twilio conversation error:", error);
+      twiml.say({ voice: "Polly.Amy" }, "I am experiencing a brief technical issue. Let me connect you to our team.");
+      twiml.say({ voice: "Polly.Amy" }, "Thank you for calling United Solutions Assisting Kind-er Ones. A team member will follow up with you shortly. Take care.");
+      twiml.hangup();
+    }
+    res.type("text/xml").send(twiml.toString());
+  });
+
+  // Clean up call state when calls end (Twilio status callback)
+  app.post("/api/twilio/voice/status", (req, res) => {
+    const { CallSid, CallStatus } = req.body;
+    if (CallStatus === "completed" || CallStatus === "failed" || CallStatus === "canceled") {
+      twilioCallState.delete(CallSid);
+      console.log(`Call ${CallSid} ended (${CallStatus}), cleaned up state.`);
+    }
+    res.sendStatus(200);
   });
 
   app.get("/api/leads", (req, res) => {
