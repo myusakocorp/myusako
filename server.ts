@@ -128,7 +128,7 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true }));
 
   app.use(session({
-    secret: "usako-secret-key-2026",
+    secret: process.env.SESSION_SECRET || "usako-secret-key-2026",
     resave: false,
     saveUninitialized: false,
     proxy: true,
