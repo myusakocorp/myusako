@@ -123,9 +123,6 @@ export default function App() {
     const headers: any = {
       ...(options.headers || {}),
     };
-    if (user) {
-      headers["X-User-ID"] = user.id.toString();
-    }
     // Use full URL to avoid issues with embedded credentials in the page URL
     const fullUrl = url.startsWith("/") ? `${getBaseUrl()}${url}` : url;
     return fetch(fullUrl, { ...options, headers, credentials: "same-origin" });
