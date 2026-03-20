@@ -86,8 +86,10 @@ function pickVoice(config: VoiceConfig): SpeechSynthesisVoice | null {
       if (match) return match;
     }
   } else {
-    // Try any female voice in the target locale
-    if (localeVoices.length > 0) return localeVoices[0];
+    // Try any female voice in the target locale (exclude known male names)
+    const malePatterns = ['David', 'James', 'Daniel', 'Mark', 'Guy', 'Male', 'Aaron', 'Reed', 'George', 'Rishi', 'Prabhat'];
+    const femaleInLocale = localeVoices.find(v => !malePatterns.some(mp => v.name.includes(mp)));
+    if (femaleInLocale) return femaleInLocale;
     // Fall back to any female English voice
     const femalePatterns = ['Samantha', 'Karen', 'Victoria', 'Zira', 'Susan', 'Female', 'Fiona', 'Moira', 'Tessa', 'Kate', 'Serena'];
     for (const pat of femalePatterns) {

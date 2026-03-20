@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Hash, Shield, Truck, CassetteTape, Plus, Trash2, Edit2, Save, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { speakText, stopSpeech, testAudio, isSpeechSupported, previewAgentVoice, AGENT_VOICE_INFO, getResolvedVoiceName, getAvailableVoices } from "./utils/speechUtils";
+import { speakText, stopSpeech, testAudio, isSpeechSupported, previewAgentVoice, AGENT_VOICE_INFO } from "./utils/speechUtils";
 import DOMPurify from "dompurify";
 import { io, Socket } from "socket.io-client";
 import FullCalendar from "@fullcalendar/react";
