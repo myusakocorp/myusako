@@ -7,23 +7,29 @@ interface VoiceConfig {
   preferredVoices: string[]; // Preferred voice name patterns (first match wins)
 }
 
-// Distinct voice profiles per agent persona — each agent has a unique accent
+// Distinct voice profiles per agent persona — each uses a specific Microsoft Neural voice
+// Voice packs: Harmony=Jenny(Natural), River=Guy(Natural), Joy=Aria(Natural)
+// Users must install the .msix voice packs on Windows for best results.
+// The preferredVoices list includes multiple name patterns to match different browsers/OS.
 const AGENT_VOICES: Record<string, VoiceConfig> = {
   // Main menu / default — neutral American female
-  menu:      { gender: 'female', pitch: 1.0,  rate: 0.92, lang: 'en-US', preferredVoices: ['Samantha', 'Google US English', 'Microsoft Zira', 'Zira'] },
+  menu:      { gender: 'female', pitch: 1.0,  rate: 0.92, lang: 'en-US', preferredVoices: ['Microsoft Jenny', 'Jenny', 'Samantha', 'Google US English', 'Microsoft Zira', 'Zira'] },
 
   // Harmony (Client Services) — Female, warm & concerned, Indian accent
-  harmony:   { gender: 'female', pitch: 1.05, rate: 0.88, lang: 'en-IN', preferredVoices: ['Google \u0939\u093F\u0928\u094D\u0926\u0940', 'Rishi', 'Veena', 'Lekha', 'en-IN', 'en_IN'] },
+  // Voice pack: Microsoft Jenny(Natural) - English (United States)
+  harmony:   { gender: 'female', pitch: 1.05, rate: 0.88, lang: 'en-IN', preferredVoices: ['Microsoft Jenny', 'Jenny Online', 'Jenny', 'Google हिन्दी', 'Rishi', 'Veena', 'Lekha'] },
 
   // River (Donations) — Male, professional & welcoming, Jamaican accent
-  // No native Jamaican voice in browsers; use en-GB male with Caribbean-esque deep pitch & relaxed rate
-  river:     { gender: 'male',   pitch: 0.72, rate: 0.84, lang: 'en-GB', preferredVoices: ['Daniel', 'Google UK English Male', 'Microsoft George', 'George', 'James'] },
+  // Voice pack: Microsoft Guy(Natural) - English (United States)
+  river:     { gender: 'male',   pitch: 0.72, rate: 0.84, lang: 'en-GB', preferredVoices: ['Microsoft Guy', 'Guy Online', 'Guy', 'Daniel', 'Google UK English Male', 'Microsoft George', 'George', 'James'] },
 
   // Hope (Operations) — Female, hopeful & clear, American Southern twang
+  // No .msix provided — uses locale + pitch/rate tuning for southern drawl
   hope:      { gender: 'female', pitch: 0.95, rate: 0.78, lang: 'en-US', preferredVoices: ['Moira', 'Google US English', 'Microsoft Zira', 'Samantha'] },
 
   // Joy (General Info) — Female, joyful & bright, British accent
-  joy:       { gender: 'female', pitch: 1.25, rate: 0.98, lang: 'en-GB', preferredVoices: ['Kate', 'Google UK English Female', 'Microsoft Hazel', 'Fiona', 'Serena', 'Martha'] },
+  // Voice pack: Microsoft Aria(Natural) - English (United States)
+  joy:       { gender: 'female', pitch: 1.25, rate: 0.98, lang: 'en-GB', preferredVoices: ['Microsoft Aria', 'Aria Online', 'Aria', 'Kate', 'Google UK English Female', 'Microsoft Hazel', 'Fiona', 'Serena', 'Martha'] },
 
   // Operator / Directory — neutral
   operator:  { gender: 'female', pitch: 1.0,  rate: 0.92, lang: 'en-US', preferredVoices: ['Samantha', 'Google US English', 'Microsoft Zira', 'Zira'] },
