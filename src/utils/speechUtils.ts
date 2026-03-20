@@ -8,7 +8,7 @@ interface VoiceConfig {
 }
 
 // Distinct voice profiles per agent persona — each uses a specific Microsoft Neural voice
-// Voice packs: Harmony=Jenny(Natural), River=Guy(Natural), Joy=Aria(Natural)
+// Voice packs: Harmony=Jenny(Natural), River=Guy(Natural), Hope=Sonia(Natural), Joy=Aria(Natural)
 // Users must install the .msix voice packs on Windows for best results.
 // The preferredVoices list includes multiple name patterns to match different browsers/OS.
 const AGENT_VOICES: Record<string, VoiceConfig> = {
@@ -24,8 +24,8 @@ const AGENT_VOICES: Record<string, VoiceConfig> = {
   river:     { gender: 'male',   pitch: 0.72, rate: 0.84, lang: 'en-GB', preferredVoices: ['Microsoft Guy', 'Guy Online', 'Guy', 'Daniel', 'Google UK English Male', 'Microsoft George', 'George', 'James'] },
 
   // Hope (Operations) — Female, hopeful & clear, American Southern twang
-  // No .msix provided — uses locale + pitch/rate tuning for southern drawl
-  hope:      { gender: 'female', pitch: 0.95, rate: 0.78, lang: 'en-US', preferredVoices: ['Moira', 'Google US English', 'Microsoft Zira', 'Samantha'] },
+  // Voice pack: Microsoft Sonia(Natural) - English (United Kingdom)
+  hope:      { gender: 'female', pitch: 0.95, rate: 0.78, lang: 'en-US', preferredVoices: ['Microsoft Sonia', 'Sonia Online', 'Sonia', 'Moira', 'Google US English', 'Microsoft Zira', 'Samantha'] },
 
   // Joy (General Info) — Female, joyful & bright, British accent
   // Voice pack: Microsoft Aria(Natural) - English (United States)
@@ -173,3 +173,40 @@ export function testAudio(): Promise<void> {
 export function isSpeechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
 }
+// Agent voice metadata for UI display
+export interface AgentVoiceInfo {
+  agent: string;
+  label: string;
+  role: string;
+  accent: string;
+  voicePack: string;
+  sampleText: string;
+}
+
+export const AGENT_VOICE_INFO: AgentVoiceInfo[] = [
+  { agent: 'harmony', label: 'Harmony', role: 'Client Services', accent: 'Indian', voicePack: 'Microsoft Jenny(Natural)', sampleText: 'Hello, my name is Harmony. I am here to help you with client services. How may I assist you today?' },
+  { agent: 'river', label: 'River', role: 'Donations', accent: 'Jamaican', voicePack: 'Microsoft Guy(Natural)', sampleText: 'Welcome, my name is River. I handle donations and giving. How can I help you contribute today?' },
+  { agent: 'hope', label: 'Hope', role: 'Operations', accent: 'Southern US', voicePack: 'Microsoft Sonia(Natural)', sampleText: 'Hi there, my name is Hope. I take care of operations around here. What can I do for you today?' },
+  { agent: 'joy', label: 'Joy', role: 'General Info', accent: 'British', voicePack: 'Microsoft Aria(Natural)', sampleText: 'Good day, my name is Joy. I provide general information about our organization. How may I help?' },
+];
+
+// Preview a specific agent's voice with a sample phrase
+export function previewAgentVoice(agent: string): Promise<void> {
+  const info = AGENT_VOICE_INFO.find(a => a.agent === agent);
+  if (!info) return Promise.resolve();
+  return speakText(info.sampleText, agent);
+}
+
+// Get the currently resolved voice name for an agent (useful for displaying which voice is active)
+export function getResolvedVoiceName(agent: string): string {
+  const config = AGENT_VOICES[agent] || AGENT_VOICES.menu;
+  const voice = pickVoice(config);
+  return voice ? voice.name : 'Default browser voice';
+}
+
+// List all available browser voices (for debugging / voice selection UI)
+export function getAvailableVoices(): { name: string; lang: string }[] {
+  const voices = loadVoices();
+  return voices.map(v => ({ name: v.name, lang: v.lang }));
+}
+
