@@ -25,7 +25,7 @@ const AGENT_VOICES: Record<string, VoiceConfig> = {
 
   // Hope (Operations) — Female, hopeful & clear, American Southern twang
   // Voice pack: Microsoft Sonia(Natural) - English (United Kingdom)
-  hope:      { gender: 'female', pitch: 0.95, rate: 0.78, lang: 'en-US', preferredVoices: ['Microsoft Sonia', 'Sonia Online', 'Sonia', 'Moira', 'Google US English', 'Microsoft Zira', 'Samantha'] },
+  hope:      { gender: 'female', pitch: 0.95, rate: 0.78, lang: 'en-GB', preferredVoices: ['Microsoft Sonia', 'Sonia Online', 'Sonia', 'Moira', 'Google UK English Female', 'Microsoft Hazel', 'Samantha'] },
 
   // Joy (General Info) — Female, joyful & bright, British accent
   // Voice pack: Microsoft Aria(Natural) - English (United States)
@@ -173,6 +173,7 @@ export function testAudio(): Promise<void> {
 export function isSpeechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
 }
+
 // Agent voice metadata for UI display
 export interface AgentVoiceInfo {
   agent: string;
@@ -209,4 +210,3 @@ export function getAvailableVoices(): { name: string; lang: string }[] {
   const voices = loadVoices();
   return voices.map(v => ({ name: v.name, lang: v.lang }));
 }
-
