@@ -17,7 +17,7 @@ const AGENT_VOICES: Record<string, VoiceConfig> = {
 
   // Harmony (Client Services) — Female, warm & concerned, Indian accent
   // Voice pack: Microsoft Jenny(Natural) - English (United States)
-  harmony:   { gender: 'female', pitch: 1.05, rate: 0.88, lang: 'en-IN', preferredVoices: ['Microsoft Jenny', 'Jenny Online', 'Jenny', 'Google हिन्दी', 'Rishi', 'Veena', 'Lekha'] },
+  harmony:   { gender: 'female', pitch: 1.05, rate: 0.88, lang: 'en-IN', preferredVoices: ['Microsoft Jenny', 'Jenny Online', 'Jenny', 'Google हिन्दी', 'Veena', 'Lekha', 'Rishi'] },
 
   // River (Donations) — Male, professional & welcoming, Jamaican accent
   // Voice pack: Microsoft Guy(Natural) - English (United States)
