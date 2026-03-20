@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Hash, Shield, Truck, CassetteTape, Plus, Trash2, Edit2, Save, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { speakText, stopSpeech, testAudio, isSpeechSupported } from "./utils/speechUtils";
+import { speakText, stopSpeech, testAudio, isSpeechSupported, previewAgentVoice, AGENT_VOICE_INFO } from "./utils/speechUtils";
 import DOMPurify from "dompurify";
 import { io, Socket } from "socket.io-client";
 import FullCalendar from "@fullcalendar/react";
@@ -1045,6 +1045,29 @@ export default function App() {
                           <button onClick={() => { stopSpeech(); startSimulation(); }} className="text-[10px] uppercase tracking-widest opacity-50 hover:opacity-100">Reset</button>
                         </div>
                       </div>
+                      {/* Voice Sample Preview Panel */}
+                      {isSpeechSupported() && simMessages.length === 0 && (
+                        <div className="px-6 py-4 border-b border-black/5 bg-[#f5f2ed]/50">
+                          <p className="text-[10px] uppercase tracking-widest opacity-50 mb-3">Preview Agent Voices</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {AGENT_VOICE_INFO.map((info) => (
+                              <button
+                                key={info.agent}
+                                onClick={() => { stopSpeech(); previewAgentVoice(info.agent); }}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#5A5A40]/20 hover:border-[#5A5A40]/60 hover:bg-[#5A5A40]/5 transition-all text-left group"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-[#5A5A40]/10 group-hover:bg-[#5A5A40]/20 flex items-center justify-center flex-shrink-0">
+                                  <Volume2 size={10} className="text-[#5A5A40]" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold truncate">{info.label}</p>
+                                  <p className="text-[9px] opacity-50 truncate">{info.role} • {info.accent}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="flex-1 overflow-y-auto p-10 space-y-6">
                         {simMessages.length === 0 ? (
                           <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-40">
